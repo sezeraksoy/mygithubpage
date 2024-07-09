@@ -2,15 +2,19 @@
 
 # Function to read username and password
 read_credentials() {
-    read -p "Please enter your username: " username
+    # Read username
+    echo -n "Please enter your username: "
+    read username
 
     while true; do
         # First password entry
-        read -sp "Please enter your password: " pass1
+        echo -n "Please enter your password: "
+        read -s pass1
         echo
 
         # Second password entry
-        read -sp "Please re-enter your password: " pass2
+        echo -n "Please re-enter your password: "
+        read -s pass2
         echo
 
         # Check if passwords match
@@ -22,15 +26,15 @@ read_credentials() {
 
             # Encode the hex password with Base64
             encoded_pass=$(echo -n "$hex_pass" | base64)
-        
+
             # Append the username and encoded password to the file
-            echo $(echo -n "$username:$encoded_pass" | xxd -p) >> sas_auth.conf
+            echo "$username:$encoded_pass" >> sas_auth.conf
 
             # Inform the user
             echo "Username and password successfully encoded and saved."
 
             # Set file permissions
-            # chmod 600 password_file.txt
+            chmod 600 sas_auth.conf
 
             break
         fi
@@ -39,4 +43,3 @@ read_credentials() {
 
 # Read credentials
 read_credentials
-
