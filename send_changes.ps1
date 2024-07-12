@@ -135,5 +135,5 @@ $watcher.EnableRaisingEvents = $true
 
 # Sonsuz döngüde scriptin çalışmasını sağlamak için bekletme
 while ($true) {
-    Start-Sleep -Seconds 3  # Scriptin sürekli çalışmasını sağlamak için uyku modunda bekletme
+    Start-Sleep -Seconds 5  # Scriptin sürekli çalışmasını sağlamak için uyku modunda bekletme
 }
