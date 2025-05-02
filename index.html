@@ -194,52 +194,75 @@
     }
 
     function processData(data) {
-        console.log("Veri işleniyor...");
-        const nodesMap = new Map(); const edgesArray = []; const degrees = {}; areas.clear();
+    console.log("Veri işleniyor...");
+    const nodesMap = new Map();
+    const edgesSet = new Set(); // *** Değişiklik: Mükerrer kenarları önlemek için Set kullan ***
+    const edgesArray = [];
+    const degrees = {};
+    areas.clear();
 
-        data.forEach(row => {
-            const source = row.source_table_name?.trim(); const target = row.target_table_name?.trim();
-            if (source && target && source !== target) {
+    data.forEach(row => {
+        const source = row.source_table_name?.trim();
+        const target = row.target_table_name?.trim();
+
+        if (source && target && source !== target) {
+            // *** Değişiklik: Kenarı Set'e eklemeden önce kontrol et ***
+            const edgeKey = `${source}->${target}`; // Benzersiz kenar anahtarı
+            if (!edgesSet.has(edgeKey)) { // Bu ilişki daha önce eklenmediyse
+                edgesSet.add(edgeKey); // Set'e ekle
+
+                // Düğümleri ekle (varsa tekrar eklemez)
                 if (!nodesMap.has(source)) nodesMap.set(source, { id: source, label: source });
                 if (!nodesMap.has(target)) nodesMap.set(target, { id: target, label: target });
-                edgesArray.push({ from: source, to: target, id: `${source}->${target}` });
+
+                // Benzersiz kenarı diziye ekle (ID ile birlikte)
+                edgesArray.push({ from: source, to: target, id: edgeKey });
+
+                // Dereceleri sadece benzersiz ilişki için güncelle
                 degrees[source] = (degrees[source] || 0) + 1;
                 degrees[target] = (degrees[target] || 0) + 1;
-            } else if (source && !target) {
-                if (!nodesMap.has(source)) nodesMap.set(source, { id: source, label: source });
-                degrees[source] = (degrees[source] || 0);
+            } else {
+                // console.log(`Mükerrer ilişki atlandı: ${edgeKey}`); // İsteğe bağlı: Mükerrerleri logla
             }
-        });
+        } else if (source && !target) {
+             // Sadece kaynak olan düğümlerin eklenmesi (değişiklik yok)
+            if (!nodesMap.has(source)) nodesMap.set(source, { id: source, label: source });
+            degrees[source] = (degrees[source] || 0);
+        } // İsterseniz sadece target olanları da ekleyebilirsiniz
+    });
 
-        const nodesArray = []; const nodeIds = Array.from(nodesMap.keys());
-        const minDeg = Math.min(0, ...Object.values(degrees)); const maxDeg = Math.max(1, ...Object.values(degrees));
+    // --- Buradan sonrası aynı kalıyor ---
+    const nodesArray = []; const nodeIds = Array.from(nodesMap.keys());
+    const minDeg = Math.min(0, ...Object.values(degrees)); const maxDeg = Math.max(1, ...Object.values(degrees));
 
-        nodeIds.forEach(nodeId => {
-            const nodeData = nodesMap.get(nodeId); const degree = degrees[nodeId] || 0;
-            let size = (nodeSizeRange.min + nodeSizeRange.max) / 2;
-            if (maxDeg > minDeg) {
-                const normalizedDeg = (degree - minDeg) / (maxDeg - minDeg);
-                size = nodeSizeRange.min + normalizedDeg * (nodeSizeRange.max - nodeSizeRange.min);
-            }
-            nodeData.size = size;
-            const parts = nodeId.split('_'); const prefix = parts[0]?.toLowerCase();
-            const area = parts.length > 1 ? parts[1] : 'Diğer';
-            nodeData.area = area; areas.add(area);
-            let group = 'Other';
-            if (prefix === 'stg') group = 'Staging'; else if (prefix === 'dim') group = 'Dimension';
-            else if (prefix === 'fct' || prefix === 'fact') group = 'Fact'; else if (prefix === 'agg') group = 'Aggregate';
-            else if (prefix === 'rpt') group = 'Reporting'; else if (prefix === 'mrt') group = 'Mart';
-            else if (prefix === 'src') group = 'Source';
-            nodeData.group = group;
-            nodesArray.push(nodeData);
-        });
+    nodeIds.forEach(nodeId => {
+        const nodeData = nodesMap.get(nodeId); const degree = degrees[nodeId] || 0;
+        let size = (nodeSizeRange.min + nodeSizeRange.max) / 2;
+        if (maxDeg > minDeg) {
+            const normalizedDeg = (degree - minDeg) / (maxDeg - minDeg);
+            size = nodeSizeRange.min + normalizedDeg * (nodeSizeRange.max - nodeSizeRange.min);
+        }
+        nodeData.size = size;
+        const parts = nodeId.split('_'); const prefix = parts[0]?.toLowerCase();
+        const area = parts.length > 1 ? parts[1] : 'Diğer';
+        nodeData.area = area; areas.add(area);
+        let group = 'Other';
+        if (prefix === 'stg') group = 'Staging'; else if (prefix === 'dim') group = 'Dimension';
+        else if (prefix === 'fct' || prefix === 'fact') group = 'Fact'; else if (prefix === 'agg') group = 'Aggregate';
+        else if (prefix === 'rpt') group = 'Reporting'; else if (prefix === 'mrt') group = 'Mart';
+        else if (prefix === 'src') group = 'Source';
+        nodeData.group = group;
+        nodesArray.push(nodeData);
+    });
 
-        console.log(`İşlendi: ${nodesArray.length} düğüm, ${edgesArray.length} kenar.`);
-        allNodes = new vis.DataSet(nodesArray); allEdges = new vis.DataSet(edgesArray);
-        nodeDataList.innerHTML = nodeIds.sort().map(id => `<option value="${id}"></option>`).join('');
-        populateAreaFilters();
-        initializeNetwork(); // Ağı başlat
-    }
+    console.log(`İşlendi (Benzersiz): ${nodesArray.length} düğüm, ${edgesArray.length} kenar.`); // Log mesajını güncelle
+    allNodes = new vis.DataSet(nodesArray);
+    allEdges = new vis.DataSet(edgesArray); // Artık benzersiz kenarlar içeriyor
+
+    nodeDataList.innerHTML = nodeIds.sort().map(id => `<option value="${id}"></option>`).join('');
+    populateAreaFilters();
+    initializeNetwork(); // Ağı başlat
+}
 
      function populateAreaFilters() {
         filterContainer.innerHTML = '';
