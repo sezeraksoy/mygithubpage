@@ -4,66 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Etkileşimli Bağımlılık Zinciri Keşfi</title>
-    <!-- vis-network kütüphanesi -->
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-    <!-- PapaParse kütüphanesi (CSV işlemek için) -->
     <script type="text/javascript" src="https://unpkg.com/papaparse@5.3.0/papaparse.min.js"></script>
     <style type="text/css">
-        html, body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            width: 100%; height: 100%; margin: 0; padding: 0;
-            overflow: hidden; background-color: #f4f6f9;
-        }
+        /* Önceki stiller aynı kalıyor */
+        html, body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #f4f6f9; }
         #main-container { display: flex; flex-direction: column; height: 100%; }
-        #controls {
-            padding: 12px 15px; background-color: #ffffff; border-bottom: 1px solid #dee2e6;
-            display: flex; flex-wrap: wrap; align-items: center; gap: 15px; /* Gap slightly reduced */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
+        #controls { padding: 10px 15px; background-color: #ffffff; border-bottom: 1px solid #dee2e6; display: flex; flex-wrap: wrap; align-items: center; /* Dikey hizalama center */ gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .control-group { display: flex; align-items: center; gap: 8px; }
-        .control-group label { font-weight: 600; color: #495057; margin-bottom: 0; white-space: nowrap; }
-        #start-node-input {
-            padding: 7px 10px; min-width: 300px; border: 1px solid #ced4da;
-            border-radius: 4px; font-size: 1em; transition: border-color 0.2s ease-in-out;
-            flex-grow: 1; /* Take available space */
+        .control-group label, .control-group span { /* Span'ları da label gibi hizala */
+            font-weight: 600; color: #495057; margin-bottom: 0; white-space: nowrap;
         }
-        #start-node-input:focus {
-             border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
-        }
-        #generate-button {
-            padding: 7px 15px; font-size: 1em; cursor: pointer;
-            background-color: #007bff; color: white; border: none;
-            border-radius: 4px; transition: background-color 0.2s ease;
-        }
+         .control-group input[type="checkbox"] { margin-right: 4px; cursor: pointer; }
+        #node-search-input { padding: 7px 10px; min-width: 250px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1em; }
+        #node-search-input:focus { border-color: #80bdff; outline: 0; box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25); }
+        #add-node-button, #generate-button { padding: 7px 15px; font-size: 1em; cursor: pointer; background-color: #28a745; color: white; border: none; border-radius: 4px; transition: background-color 0.2s ease; }
+        #add-node-button:hover { background-color: #218838; }
+        #add-node-button:disabled { background-color: #cccccc; cursor: not-allowed;}
+        #generate-button { background-color: #007bff; /* Generate butonu için farklı renk */ }
         #generate-button:hover { background-color: #0056b3; }
         #generate-button:disabled { background-color: #cccccc; cursor: not-allowed; }
-        #graph-container {
-            flex-grow: 1; background-color: #ffffff; position: relative; min-height: 300px;
-            border-top: 1px solid #dee2e6; /* Add a separator */
-        }
-        #message-area { /* Combined message area */
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 1.2em; color: #555; text-align: center;
-            background-color: rgba(255, 255, 255, 0.9); padding: 20px;
-            border-radius: 8px; z-index: 10; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            display: block; /* Show initial prompt */
-        }
+        #selected-nodes-container { display: flex; flex-wrap: wrap; /* Etiketlerin sığmazsa alta geçmesi */ gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; width: 100%; /* Tam genişlik */ order: 3; /* Diğer kontrollerin altına */ }
+        #selected-nodes-container:empty { display: none; } /* Boşken gizle */
+        .selected-node-tag { display: inline-flex; align-items: center; background-color: #e2e6ea; border: 1px solid #ced4da; border-radius: 12px; padding: 3px 8px; font-size: 0.9em; }
+        .selected-node-tag span { margin-right: 5px; font-weight: normal; }
+        .remove-node-button { background: none; border: none; color: #dc3545; cursor: pointer; font-weight: bold; padding: 0 3px; line-height: 1; font-size: 1.1em; }
+        #graph-container { flex-grow: 1; background-color: #ffffff; position: relative; min-height: 300px; border-top: 1px solid #dee2e6; }
+        #message-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2em; color: #555; text-align: center; background-color: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; z-index: 10; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: block; }
         #message-area.loading { color: #0056b3; }
         #message-area.error { color: #dc3545; }
-        #message-area.hidden { display: none; } /* Hide when graph is shown */
-
-        .vis-navigation .vis-button { /* Navigation buttons styling (optional) */
-             background-color: rgba(0, 123, 255, 0.7) !important; color: white !important;
-             border: none !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
-        }
-         .vis-navigation .vis-button:hover { background-color: rgba(0, 105, 217, 0.8) !important; }
-         /* Style for the starting node */
-         .vis-network .vis-node.start-node {
-            border-width: 4px !important;
-            border-color: #ff8c00 !important; /* Orange border */
-            color: black !important; /* Ensure label is readable */
-         }
-
+        #message-area.hidden { display: none; }
+        .vis-navigation .vis-button { background-color: rgba(0, 123, 255, 0.7) !important; color: white !important; border: none !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important; }
+        .vis-navigation .vis-button:hover { background-color: rgba(0, 105, 217, 0.8) !important; }
+        #context-menu { position: absolute; background-color: #f9f9f9; border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); padding: 5px 0; min-width: 120px; z-index: 1000; display: none; border-radius: 4px; }
+        #context-menu button { display: block; width: 100%; padding: 8px 15px; border: none; background: none; text-align: left; cursor: pointer; font-size: 0.95em; }
+        #context-menu button:hover { background-color: #eee; }
     </style>
 </head>
 <body>
@@ -71,19 +46,40 @@
 <div id="main-container">
     <!-- Kontrol Alanı -->
     <div id="controls">
-        <div class="control-group" style="flex-grow: 1;"> <!-- Make this group take space -->
-            <label for="start-node-input">Başlangıç Tablosu:</label>
-            <input type="search" id="start-node-input" list="node-list" placeholder="Keşfetmek için tablo adını girin...">
-            <datalist id="node-list"></datalist> <!-- Datalist for autocomplete -->
-        </div>
+        <!-- Arama ve Ekleme Grubu -->
         <div class="control-group">
-            <button id="generate-button" disabled>Grafiği Oluştur</button>
+            <label for="node-search-input">Tablo Ara:</label>
+            <input type="search" id="node-search-input" list="node-list" placeholder="Tablo adını yazın...">
+            <datalist id="node-list"></datalist>
+            <button id="add-node-button" disabled>Ekle</button>
         </div>
+
+        <!-- Ayar Kontrolleri Grubu -->
+        <div class="control-group" style="margin-left: auto;"> <!-- Sağa yasla -->
+            <input type="checkbox" id="toggle-hierarchy">
+            <label for="toggle-hierarchy">Hiyerarşik Düzen (LR)</label>
+
+            <input type="checkbox" id="toggle-physics" checked> <!-- Başlangıçta fizik açık -->
+            <label for="toggle-physics">Fiziği Etkinleştir</label>
+        </div>
+
+         <!-- Seçilenler ve Oluşturma Butonu Grubu -->
+         <div class="control-group">
+             <button id="generate-button" disabled>Grafiği Oluştur</button>
+         </div>
+
+         <!-- Seçilen Tabloların Gösterileceği Alan -->
+         <div id="selected-nodes-container"></div>
     </div>
 
     <!-- Grafik Konteyneri -->
     <div id="graph-container">
-        <div id="message-area">Başlamak için bir tablo adı girin ve butona tıklayın.</div>
+        <div id="message-area">Başlamak için tablo arayın, ekleyin ve 'Grafiği Oluştur'a tıklayın.</div>
+    </div>
+
+    <!-- Sağ Tık Menüsü -->
+    <div id="context-menu">
+        <button id="copy-node-name-button">İsmi Kopyala</button>
     </div>
 </div>
 
@@ -93,375 +89,207 @@
     const csvPath = 'lib/table_relations.csv';
     const nodeSizeRange = { min: 15, max: 45 };
 
-    // --- vis-network Seçenekleri (Zincir gösterimi için ayarlanabilir) ---
-    const visOptions = {
+    // --- vis-network Varsayılan Seçenekleri ---
+    // Başlangıçta HİYERARŞİK OLMAYAN ve FİZİK AÇIK olacak şekilde ayarla
+    const defaultVisOptions = {
+        layout: { hierarchical: { enabled: false } }, // Başlangıçta hiyerarşi kapalı
+        physics: {
+            enabled: true, // Başlangıçta fizik açık
+            solver: 'barnesHut',
+            barnesHut: { gravitationalConstant: -25000, centralGravity: 0.1, springLength: 150, springConstant: 0.02, damping: 0.1, avoidOverlap: 0.2 },
+            stabilization: { enabled: true, iterations: 150, updateInterval: 25 }
+        },
+        // Diğer seçenekler (nodes, edges, interaction, groups, configure) öncekiyle aynı
+        nodes: { borderWidth: 1.5, borderWidthSelected: 3, shape: "box", shapeProperties: { borderRadius: 3 }, font: { size: 14, face: "'Segoe UI', Tahoma, sans-serif", color: "#212529" }, color: { border: "#adb5bd", background: "#e9ecef", highlight: { border: "#e60000", background: "#ffcccc" }, hover: { border: "#6c757d", background: "#dee2e6" } }, scaling: { min: nodeSizeRange.min, max: nodeSizeRange.max } },
+        edges: { arrows: { to: { enabled: true, scaleFactor: 0.9, type: "arrow" } }, color: { color: "#ced4da", highlight: "#e60000", hover: "#adb5bd", inherit: false }, smooth: { enabled: true, type: "dynamic" , roundness: 0.4 }, width: 1.5, hoverWidth: 2, selectionWidth: 2.5 },
+        interaction: { hover: true, tooltipDelay: 250, navigationButtons: true, keyboard: true, selectConnectedEdges: true, hoverConnectedEdges: true, dragNodes: true, dragView: true, zoomView: true },
+        groups: { Staging: { color: { background: "#fff3cd", border: "#ffe69c" }, shape: "database" }, Dimension: { color: { background: "#d1e7dd", border: "#a3cfbb" }, shape: "ellipse" }, Fact: { color: { background: "#cfe2ff", border: "#a6c9ff" }, shape: "box", font: {bold: {size: 16}} }, Aggregate: { color: { background: "#e2d9f3", border: "#c5b6e3" }, shape: "hexagon" }, Reporting: { color: { background: "#f8d7da", border: "#f5c2c7" }, shape: "star" }, Mart: { color: { background: "#d4edda", border: "#b3dfca" }, shape: "diamond" }, Source: { color: { background: "#dee2e6", border: "#adb5bd" }, shape: "dot", size: nodeSizeRange.min }, Other: { color: { background: "#e9ecef", border: "#adb5bd" } } },
+        configure: { enabled: false }
+    };
+
+    // Hiyerarşik düzen ve fizik için ayrı yapılandırmalar
+    const hierarchicalOptions = {
         layout: {
-            hierarchical: { // Hiyerarşik düzen zincir için hala iyi olabilir
+            hierarchical: {
                 enabled: true, direction: "LR", sortMethod: "directed",
-                levelSeparation: 250, nodeSpacing: 150, treeSpacing: 200 // Biraz daha sıkı olabilir
+                levelSeparation: 250, nodeSpacing: 150, treeSpacing: 200
             }
         },
-        physics: { // Başlangıçta fizik etkin, sonra kapatılabilir
-            enabled: true, // Zincir küçükse fizik hızlı çalışır
-            solver: "hierarchicalRepulsion",
-             hierarchicalRepulsion: { // Daha az agresif ayarlar yeterli olabilir
+        physics: { // Hiyerarşi açıkken bu fiziği kullan
+            // enabled durumu checkbox'tan alınacak
+            solver: 'hierarchicalRepulsion',
+            hierarchicalRepulsion: {
                 centralGravity: 0.3, springLength: 150, springConstant: 0.04,
                 nodeDistance: 180, damping: 0.15
             },
-            minVelocity: 0.75,
-            stabilization: { enabled: true, iterations: 200, updateInterval: 25 }
-        },
-        nodes: { // Stil tanımları (önceki gibi)
-            borderWidth: 1.5, borderWidthSelected: 3, shape: "box",
-            shapeProperties: { borderRadius: 3 },
-            font: { size: 14, face: "'Segoe UI', Tahoma, sans-serif", color: "#212529" },
-            color: { border: "#adb5bd", background: "#e9ecef",
-                     highlight: { border: "#e60000", background: "#ffcccc" },
-                     hover: { border: "#6c757d", background: "#dee2e6" } },
-             scaling: { min: nodeSizeRange.min, max: nodeSizeRange.max }
-        },
-        edges: { // Kenar stilleri (önceki gibi)
-            arrows: { to: { enabled: true, scaleFactor: 0.9, type: "arrow" } },
-            color: { color: "#ced4da", highlight: "#e60000", hover: "#adb5bd", inherit: false },
-            smooth: { enabled: true, type: "cubicBezier", forceDirection: "horizontal", roundness: 0.4 },
-            width: 1.5, hoverWidth: 2, selectionWidth: 2.5
-        },
-        interaction: { // Etkileşimler (önceki gibi)
-            hover: true, tooltipDelay: 250, navigationButtons: true,
-            keyboard: true, selectConnectedEdges: true, hoverConnectedEdges: true,
-            dragNodes: true, dragView: true, zoomView: true
-        },
-        groups: { // Grup stilleri (önceki gibi)
-            Staging: { color: { background: "#fff3cd", border: "#ffe69c" }, shape: "database" },
-            Dimension: { color: { background: "#d1e7dd", border: "#a3cfbb" }, shape: "ellipse" },
-            Fact: { color: { background: "#cfe2ff", border: "#a6c9ff" }, shape: "box", font: {bold: {size: 16}} },
-            Aggregate: { color: { background: "#e2d9f3", border: "#c5b6e3" }, shape: "hexagon" },
-            Reporting: { color: { background: "#f8d7da", border: "#f5c2c7" }, shape: "star" },
-            Mart: { color: { background: "#d4edda", border: "#b3dfca" }, shape: "diamond" },
-            Source: { color: { background: "#dee2e6", border: "#adb5bd" }, shape: "dot", size: nodeSizeRange.min },
-            Other: { color: { background: "#e9ecef", border: "#adb5bd" } }
-        },
-        configure: { enabled: TransformStreamDefaultController } // Config bar kapalı
+            stabilization: { enabled: true, iterations: 200, updateInterval: 25 } // Stabilizasyon her zaman açık olmalı
+        }
     };
+
+    const nonHierarchicalOptions = {
+        layout: {
+            hierarchical: { enabled: false }
+        },
+        physics: { // Hiyerarşi kapalıyken bu fiziği kullan
+            // enabled durumu checkbox'tan alınacak
+            solver: 'barnesHut',
+            barnesHut: { gravitationalConstant: -25000, centralGravity: 0.1, springLength: 150, springConstant: 0.02, damping: 0.1, avoidOverlap: 0.2 },
+            stabilization: { enabled: true, iterations: 150, updateInterval: 25 }
+        }
+    };
+
 
     // --- Global Değişkenler ---
     let network = null;
-    let allNodesData = new Map(); // Düğüm ID -> Düğüm Verisi (group, area, label vb. ile)
-    let allEdgesData = [];       // Tüm kenarlar {from, to, id}
-    let outgoingEdgesMap = new Map(); // Map<nodeId, Set<edgeObject>> - Hızlı descendant bulma için
-    let incomingEdgesMap = new Map(); // Map<nodeId, Set<edgeObject>> - Hızlı ancestor bulma için
+    let allNodesData = new Map(); let allEdgesData = [];
+    let outgoingEdgesMap = new Map(); let incomingEdgesMap = new Map();
+    let selectedStartNodes = new Set();
 
     // --- DOM Element Referansları ---
     const container = document.getElementById('graph-container');
     const messageArea = document.getElementById('message-area');
-    const startNodeInput = document.getElementById('start-node-input');
+    const nodeSearchInput = document.getElementById('node-search-input');
     const nodeDataList = document.getElementById('node-list');
+    const addNodeButton = document.getElementById('add-node-button');
     const generateButton = document.getElementById('generate-button');
+    const selectedNodesContainer = document.getElementById('selected-nodes-container');
+    const contextMenu = document.getElementById('context-menu');
+    const copyNameButton = document.getElementById('copy-node-name-button');
+    const hierarchyCheckbox = document.getElementById('toggle-hierarchy'); // Yeni checkbox
+    const physicsCheckbox = document.getElementById('toggle-physics');   // Yeni checkbox
+    let contextNodeId = null;
 
     // --- Başlatma ---
     document.addEventListener('DOMContentLoaded', () => {
         setMessage("Veri yükleniyor...", "loading");
-        generateButton.disabled = true; // Başlangıçta buton pasif
-        loadAndProcessData(); // Veriyi yükle
-        // Buton ve Input olay dinleyicileri
+        addNodeButton.disabled = true; generateButton.disabled = true;
+        // Checkbox'ların başlangıç durumunu defaultVisOptions'a göre ayarla
+        hierarchyCheckbox.checked = defaultVisOptions.layout.hierarchical.enabled;
+        physicsCheckbox.checked = defaultVisOptions.physics.enabled;
+
+        loadAndProcessData();
+        // Olay Dinleyicileri
+        addNodeButton.addEventListener('click', handleAddNodeClick);
         generateButton.addEventListener('click', handleGenerateButtonClick);
-        startNodeInput.addEventListener('input', () => { // Kullanıcı yazdıkça butonu aktif/pasif et
-            generateButton.disabled = !startNodeInput.value.trim();
-        });
-         // Enter tuşu ile de tetikleme
-         startNodeInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && !generateButton.disabled) {
-                handleGenerateButtonClick();
-            }
-        });
+        nodeSearchInput.addEventListener('input', handleSearchInput);
+        nodeSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !addNodeButton.disabled) handleAddNodeClick(); });
+        copyNameButton.addEventListener('click', handleCopyName);
+        document.addEventListener('click', hideContextMenu);
+        selectedNodesContainer.addEventListener('click', (e) => { if (e.target.classList.contains('remove-node-button')) handleRemoveNodeClick(e.target.dataset.nodeId); });
+        // Yeni Checkbox Dinleyicileri
+        hierarchyCheckbox.addEventListener('change', updateNetworkOptions);
+        physicsCheckbox.addEventListener('change', updateNetworkOptions);
     });
 
-    // --- Mesaj Gösterme Fonksiyonu ---
-    function setMessage(text, type = "info") { // type: info, loading, error
-        messageArea.textContent = text;
-        messageArea.className = type; // CSS sınıfını ayarla
-    }
-
-    function hideMessage() {
-        messageArea.classList.add("hidden");
-    }
-
-    function showMessage() {
-        messageArea.classList.remove("hidden");
-    }
+    // --- Mesaj Yönetimi ---
+    function setMessage(text, type = "info") { messageArea.textContent = text; messageArea.className = type; showMessage(); }
+    function hideMessage() { messageArea.classList.add("hidden"); }
+    function showMessage() { messageArea.classList.remove("hidden"); }
 
     // --- Veri Yükleme ve Ön İşleme ---
-    function loadAndProcessData() {
-        fetch(csvPath)
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP hatası ${response.status}: ${csvPath} alınamadı.`);
-                return response.text();
-            })
-            .then(csvText => {
-                Papa.parse(csvText, {
-                    header: true, skipEmptyLines: true,
-                    complete: (results) => {
-                        if (results.errors.length > 0) console.warn("CSV Ayrıştırma hataları:", results.errors);
-                        if (results.data.length === 0) throw new Error("CSV dosyası boş veya geçersiz.");
-                        // Veriyi ön işleme tabi tut
-                        preprocessData(results.data);
-                        // Veri yüklendi, kullanıcı girişi beklenebilir
-                        setMessage("Başlamak için bir tablo adı girin ve butona tıklayın.");
-                        // Butonu ilk başta aktif etme, kullanıcı yazınca aktif olacak
-                        // generateButton.disabled = false;
-                    },
-                    error: (error) => { throw new Error("CSV Ayrıştırma Hatası: " + error.message); }
-                });
-            })
-            .catch(error => {
-                console.error('Veri yükleme hatası:', error);
-                setMessage(`Veri yüklenemedi: ${error.message}. Web sunucusu çalışıyor mu ve ${csvPath} doğru mu?`, "error");
-            });
-    }
+    function loadAndProcessData() { /* Değişiklik Yok */ fetch(csvPath).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}: ${csvPath} alınamadı.`); return r.text(); }).then(txt => { Papa.parse(txt, { header: true, skipEmptyLines: true, complete: (res) => { if (res.errors.length > 0) console.warn("CSV Hataları:", res.errors); if (res.data.length === 0) throw new Error("CSV boş veya geçersiz."); preprocessData(res.data); setMessage("Başlamak için tablo arayın, ekleyin ve 'Grafiği Oluştur'a tıklayın."); }, error: (err) => { throw new Error("CSV Ayrıştırma Hatası: " + err.message); } }); }).catch(handleError); }
+    function preprocessData(data) { /* Değişiklik Yok */ console.log("Veri ön işleniyor..."); allNodesData.clear(); allEdgesData = []; outgoingEdgesMap.clear(); incomingEdgesMap.clear(); const eSet = new Set(); const deg = {}; data.forEach(r => { const s = r.source_table_name?.trim(); const t = r.target_table_name?.trim(); if (s && t && s !== t) { const k = `${s}->${t}`; if (!eSet.has(k)) { eSet.add(k); const e = { from: s, to: t, id: k }; allEdgesData.push(e); [s, t].forEach(nId => { if (!allNodesData.has(nId)) { allNodesData.set(nId, { id: nId, label: nId }); deg[nId] = 0; } }); deg[s]++; deg[t]++; if (!outgoingEdgesMap.has(s)) outgoingEdgesMap.set(s, new Set()); outgoingEdgesMap.get(s).add(e); if (!incomingEdgesMap.has(t)) incomingEdgesMap.set(t, new Set()); incomingEdgesMap.get(t).add(e); } } }); const nIds = Array.from(allNodesData.keys()); const minD = Math.min(0,...Object.values(deg)); const maxD = Math.max(1,...Object.values(deg)); nIds.forEach(nId => { const nData = allNodesData.get(nId); const d = deg[nId] || 0; let sz = (nodeSizeRange.min+nodeSizeRange.max)/2; if (maxD > minD) { const n = (d-minD)/(maxD-minD); sz = nodeSizeRange.min + n*(nodeSizeRange.max-nodeSizeRange.min); } nData.size = sz; const p = nId.split('_'); const pf = p[0]?.toLowerCase(); const a = p.length > 1 ? p[1] : 'Diğer'; nData.area = a; let g = 'Other'; if (pf==='stg') g='Staging'; else if (pf==='dim') g='Dimension'; else if (pf==='fct'||pf==='fact') g='Fact'; else if (pf==='agg') g='Aggregate'; else if (pf==='rpt') g='Reporting'; else if (pf==='mrt') g='Mart'; else if (pf==='src') g='Source'; nData.group = g; }); console.log(`Ön işleme: ${allNodesData.size} düğüm, ${allEdgesData.length} kenar.`); nodeDataList.innerHTML = nIds.sort().map(id => `<option value="${id}"></option>`).join(''); }
 
-    function preprocessData(data) {
-        console.log("Veri ön işleniyor...");
-        allNodesData.clear(); allEdgesData = [];
-        outgoingEdgesMap.clear(); incomingEdgesMap.clear();
-        const edgesSet = new Set(); // Mükerrer kenarları önle
-        const degrees = {};
+     // --- Arama ve Seçim İşlevleri ---
+    function handleSearchInput() { const sTerm = nodeSearchInput.value.trim(); const isValid = allNodesData.has(sTerm); addNodeButton.disabled = !(isValid && !selectedStartNodes.has(sTerm)); }
+    function handleAddNodeClick() { const nAdd = nodeSearchInput.value.trim(); if (allNodesData.has(nAdd) && !selectedStartNodes.has(nAdd)) { selectedStartNodes.add(nAdd); renderSelectedNodes(); nodeSearchInput.value = ''; addNodeButton.disabled = true; generateButton.disabled = false; } else if (selectedStartNodes.has(nAdd)) { alert(`'${nAdd}' zaten eklendi.`); } else { alert(`'${nAdd}' geçerli değil.`); } }
+    function handleRemoveNodeClick(nRemove) { if (selectedStartNodes.has(nRemove)) { selectedStartNodes.delete(nRemove); renderSelectedNodes(); generateButton.disabled = selectedStartNodes.size === 0; } }
+    function renderSelectedNodes() { selectedNodesContainer.innerHTML = ''; if (selectedStartNodes.size > 0) { selectedNodesContainer.innerHTML = '<strong>Başlangıç:</strong> '; selectedStartNodes.forEach(nId => { const tag = document.createElement('span'); tag.className = 'selected-node-tag'; tag.innerHTML = `<span>${nId}</span><button class="remove-node-button" data-node-id="${nId}" title="Kaldır">×</button>`; selectedNodesContainer.appendChild(tag); }); } }
 
-        data.forEach(row => {
-            const source = row.source_table_name?.trim(); const target = row.target_table_name?.trim();
-            if (source && target && source !== target) {
-                const edgeKey = `${source}->${target}`;
-                if (!edgesSet.has(edgeKey)) {
-                    edgesSet.add(edgeKey);
-                    const edge = { from: source, to: target, id: edgeKey };
-                    allEdgesData.push(edge);
-
-                    // Düğüm verilerini ve dereceleri işle
-                    [source, target].forEach(nodeId => {
-                        if (!allNodesData.has(nodeId)) {
-                            allNodesData.set(nodeId, { id: nodeId, label: nodeId });
-                            degrees[nodeId] = 0;
-                        }
-                    });
-                    degrees[source]++; degrees[target]++;
-
-                    // Giden ve Gelen kenar haritalarını doldur
-                    if (!outgoingEdgesMap.has(source)) outgoingEdgesMap.set(source, new Set());
-                    outgoingEdgesMap.get(source).add(edge);
-                    if (!incomingEdgesMap.has(target)) incomingEdgesMap.set(target, new Set());
-                    incomingEdgesMap.get(target).add(edge);
-                }
-            } // Sadece kaynak/hedef olanları da ekleyebiliriz gerekirse
-        });
-
-        // Düğümlere boyut, grup ve alan ata
-        const nodeIds = Array.from(allNodesData.keys());
-        const minDeg = Math.min(0, ...Object.values(degrees)); const maxDeg = Math.max(1, ...Object.values(degrees));
-        nodeIds.forEach(nodeId => {
-            const nodeData = allNodesData.get(nodeId); const degree = degrees[nodeId] || 0;
-            let size = (nodeSizeRange.min + nodeSizeRange.max) / 2;
-            if (maxDeg > minDeg) {
-                const normalizedDeg = (degree - minDeg) / (maxDeg - minDeg);
-                size = nodeSizeRange.min + normalizedDeg * (nodeSizeRange.max - nodeSizeRange.min);
-            }
-            nodeData.size = size;
-            const parts = nodeId.split('_'); const prefix = parts[0]?.toLowerCase();
-            const area = parts.length > 1 ? parts[1] : 'Diğer'; nodeData.area = area;
-            let group = 'Other';
-            if (prefix === 'stg') group = 'Staging'; else if (prefix === 'dim') group = 'Dimension';
-            else if (prefix === 'fct' || prefix === 'fact') group = 'Fact'; else if (prefix === 'agg') group = 'Aggregate';
-            else if (prefix === 'rpt') group = 'Reporting'; else if (prefix === 'mrt') group = 'Mart';
-            else if (prefix === 'src') group = 'Source';
-            nodeData.group = group;
-        });
-
-        console.log(`Ön işleme tamamlandı: ${allNodesData.size} düğüm, ${allEdgesData.length} benzersiz kenar.`);
-        // Autocomplete listesini doldur
-        nodeDataList.innerHTML = nodeIds.sort().map(id => `<option value="${id}"></option>`).join('');
-    }
-
-    // --- Zincir Bulma Fonksiyonları ---
-    function findDependencyChain(startNodeId) {
-        const chainNodes = new Set();
-        const chainEdges = new Set();
-
-        if (!allNodesData.has(startNodeId)) {
-            return null; // Başlangıç düğümü bulunamadı
-        }
-
-        // BFS (Breadth-First Search) veya DFS (Depth-First Search) kullanılabilir
-        const queue = [startNodeId]; // BFS kuyruğu
-        const visitedDown = new Set();
-        const visitedUp = new Set();
-
-        chainNodes.add(startNodeId); // Başlangıç düğümünü ekle
-
-        // 1. Aşağı Yönlü Keşif (Descendants)
-        let head = 0;
-        visitedDown.add(startNodeId); // Başlangıcı ziyaret edildi olarak işaretle (aşağı yönlü için)
-        const downQueue = [startNodeId];
-
-        while(head < downQueue.length){
-            const currentNodeId = downQueue[head++];
-            // chainNodes.add(currentNodeId); // BFS'de burada eklenebilir
-
-            if (outgoingEdgesMap.has(currentNodeId)) {
-                outgoingEdgesMap.get(currentNodeId).forEach(edge => {
-                    chainEdges.add(edge); // Kenarı ekle
-                    chainNodes.add(edge.to); // Hedef düğümü ekle
-                    if (!visitedDown.has(edge.to)) {
-                        visitedDown.add(edge.to);
-                        downQueue.push(edge.to); // Kuyruğa ekle
-                    }
-                });
-            }
-        }
-
-        // 2. Yukarı Yönlü Keşif (Ancestors)
-        head = 0; // Kuyruk indexini sıfırla
-        visitedUp.add(startNodeId); // Başlangıcı ziyaret edildi olarak işaretle (yukarı yönlü için)
-        const upQueue = [startNodeId];
-
-         while(head < upQueue.length){
-            const currentNodeId = upQueue[head++];
-            // chainNodes.add(currentNodeId); // Zaten eklendi veya eklenecek
-
-            if (incomingEdgesMap.has(currentNodeId)) {
-                 incomingEdgesMap.get(currentNodeId).forEach(edge => {
-                    chainEdges.add(edge); // Kenarı ekle
-                    chainNodes.add(edge.from); // Kaynak düğümü ekle
-                    if (!visitedUp.has(edge.from)) {
-                        visitedUp.add(edge.from);
-                        upQueue.push(edge.from); // Kuyruğa ekle
-                    }
-                });
-            }
-        }
-
-        // Sonuçları döndür
-        return {
-            nodes: Array.from(chainNodes), // Set'i diziye çevir (düğüm ID'leri)
-            edges: Array.from(chainEdges)  // Set'i diziye çevir (kenar nesneleri)
-        };
-    }
-
+    // --- Zincir Bulma ---
+    function findDependencyChain(startNodeId) { /* Değişiklik Yok */ const chainNodes = new Set(); const chainEdges = new Set(); if (!allNodesData.has(startNodeId)) return null; chainNodes.add(startNodeId); const vDown = new Set([startNodeId]); const dQ = [startNodeId]; let h = 0; while(h < dQ.length){ const c = dQ[h++]; if (outgoingEdgesMap.has(c)) { outgoingEdgesMap.get(c).forEach(e => { chainEdges.add(e); chainNodes.add(e.to); if (!vDown.has(e.to)) { vDown.add(e.to); dQ.push(e.to); } }); } } const vUp = new Set([startNodeId]); const uQ = [startNodeId]; h = 0; while(h < uQ.length){ const c = uQ[h++]; if (incomingEdgesMap.has(c)) { incomingEdgesMap.get(c).forEach(e => { chainEdges.add(e); chainNodes.add(e.from); if (!vUp.has(e.from)) { vUp.add(e.from); uQ.push(e.from); } }); } } return { nodes: Array.from(chainNodes), edges: Array.from(chainEdges) }; }
 
     // --- Grafik Oluşturma ve Güncelleme ---
     function handleGenerateButtonClick() {
-        const startNodeId = startNodeInput.value.trim();
-        if (!startNodeId) {
-            setMessage("Lütfen bir başlangıç tablo adı girin.", "error");
-            return;
-        }
-
-        if (!allNodesData.has(startNodeId)) {
-             setMessage(`Tablo bulunamadı: '${startNodeId}'. Lütfen geçerli bir tablo adı girin.`, "error");
-            return;
-        }
-
-        setMessage("Bağımlılık zinciri oluşturuluyor...", "loading");
-        generateButton.disabled = true; // Butonu pasif yap
-
-        // Zinciri bulmak için zaman aşımı kullanarak UI'ın donmasını engelle (çok büyük zincirlerde)
+        const validStartNodeIds = Array.from(selectedStartNodes);
+        if (validStartNodeIds.length === 0) { setMessage("Lütfen en az bir tablo ekleyin.", "error"); return; }
+        setMessage("Zincirler oluşturuluyor...", "loading"); generateButton.disabled = true; addNodeButton.disabled = true;
         setTimeout(() => {
             try {
-                const chain = findDependencyChain(startNodeId);
-
-                if (!chain) { // Bu durum olmamalı ama kontrol edelim
-                     throw new Error(`'${startNodeId}' için zincir bulunamadı (beklenmedik hata).`);
-                }
-
-                console.log(`Zincir bulundu: ${chain.nodes.length} düğüm, ${chain.edges.length} kenar.`);
-
-                // Zincir boşsa (sadece başlangıç düğümü varsa)
-                if (chain.nodes.length <= 1 && chain.edges.length === 0) {
-                     setMessage(`'${startNodeId}' tablosu için herhangi bir bağımlılık bulunamadı.`, "info");
-                     // Mevcut grafiği temizle
-                     if (network) network.destroy();
-                     network = null;
-                     showMessage(); // Mesaj alanını tekrar göster
-                     generateButton.disabled = false; // Butonu tekrar aktif et
-                     return;
-                }
-
-
-                // Grafik için düğüm ve kenar verilerini hazırla
-                const nodesForGraph = chain.nodes.map(nodeId => {
-                    const nodeData = { ...allNodesData.get(nodeId) }; // Orijinal veriyi kopyala
-                    // Başlangıç düğümünü özel olarak işaretle (CSS ile stil verilebilir)
-                    if (nodeId === startNodeId) {
-                        nodeData.cssClass = 'start-node'; // Özel CSS sınıfı ekle
-                        // İsterseniz rengini doğrudan da değiştirebilirsiniz
-                        // nodeData.color = { border: '#ff8c00', background: '#fff2e0' };
-                        // nodeData.borderWidth = 3;
-                    }
-                     // Pozisyonları temizle, layout yeniden hesaplasın
-                     delete nodeData.x;
-                     delete nodeData.y;
-                    return nodeData;
-                });
-                const edgesForGraph = chain.edges; // Kenarlar zaten doğru formatta
-
-                // Ağı oluştur/güncelle
-                renderChainGraph(new vis.DataSet(nodesForGraph), new vis.DataSet(edgesForGraph), startNodeId);
-                hideMessage(); // Grafik gösterildiği için mesajı gizle
-
-            } catch (error) {
-                handleError(error);
-            } finally {
-                 generateButton.disabled = false; // İşlem bitince butonu aktif et
-            }
-        }, 10); // 10ms gecikme
+                const combinedNodes = new Set(); const combinedEdges = new Map();
+                validStartNodeIds.forEach(startId => { const chain = findDependencyChain(startId); if (chain) { chain.nodes.forEach(n => combinedNodes.add(n)); chain.edges.forEach(e => combinedEdges.set(e.id, e)); } });
+                console.log(`Birleşik: ${combinedNodes.size} düğüm, ${combinedEdges.size} kenar.`);
+                if (combinedNodes.size === 0) throw new Error(`Zincir bulunamadı.`);
+                if (combinedNodes.size <= validStartNodeIds.length && combinedEdges.size === 0) { setMessage(`Seçilenler (${validStartNodeIds.join(', ')}) için bağımlılık yok.`, "info"); if (network) network.destroy(); network = null; showMessage(); generateButton.disabled = selectedStartNodes.size === 0; addNodeButton.disabled = !nodeSearchInput.value.trim() || selectedStartNodes.has(nodeSearchInput.value.trim()); return; }
+                const nodesForGraph = Array.from(combinedNodes).map(nId => { const nData = { ...allNodesData.get(nId) }; delete nData.x; delete nData.y; return nData; });
+                const edgesForGraph = Array.from(combinedEdges.values());
+                renderChainGraph(new vis.DataSet(nodesForGraph), new vis.DataSet(edgesForGraph), validStartNodeIds); hideMessage();
+            } catch (error) { handleError(error);
+            } finally { generateButton.disabled = selectedStartNodes.size === 0; addNodeButton.disabled = !nodeSearchInput.value.trim() || selectedStartNodes.has(nodeSearchInput.value.trim()); }
+        }, 10);
     }
 
-    function renderChainGraph(nodesDataSet, edgesDataSet, startNodeId) {
-        console.log("Zincir grafiği oluşturuluyor...");
-        const data = { nodes: nodesDataSet, edges: edgesDataSet };
+    function renderChainGraph(nodesDataSet, edgesDataSet, startNodeIds) {
+        console.log("Zincir grafiği oluşturuluyor..."); const data = { nodes: nodesDataSet, edges: edgesDataSet };
+        try {
+             if(network) { network.destroy(); network = null; }
+             // *** YENİ: visOptions yerine mevcut ayarlara göre seçenekleri al ***
+             const currentOptions = getCurrentVisOptions();
+             network = new vis.Network(container, data, currentOptions);
+             console.log("Zincir grafiği başarıyla oluşturuldu.");
+             network.once("stabilizationIterationsDone", () => {
+                console.log("Grafik stabilize oldu. Fit yapılıyor.");
+                 // network.setOptions({ physics: { enabled: false } }); // FİZİK AÇIK KALIYOR
+                 if (startNodeIds && startNodeIds.length > 0) network.focus(startNodeIds[0], { scale: 1.0, animation: { duration: 500 } });
+                 else network.fit({ animation: { duration: 500 } });
+             });
+             network.on("oncontext", handleRightClick); network.on("error", handleError);
+        } catch (e) { console.error("Grafik oluşturulamadı:", e); handleError(e); }
+    }
+
+    // *** YENİ: Ağ seçeneklerini güncelleme fonksiyonu ***
+    function updateNetworkOptions() {
+        if (!network) { // Henüz ağ oluşturulmadıysa bir şey yapma
+             console.log("Ağ henüz yok, seçenek güncellemesi atlandı.");
+             return;
+        }
+        console.log("Ağ seçenekleri güncelleniyor...");
+
+        const optionsToUpdate = getCurrentVisOptions();
 
         try {
-             if(network) { network.destroy(); network = null; } // Eski ağı temizle
-             // Yeni ağı oluştur
-             network = new vis.Network(container, data, visOptions);
-             console.log("Zincir grafiği başarıyla oluşturuldu.");
-
-             // Opsiyonel: Ağ stabilize olduktan sonra fiziği kapat ve fit et
-             network.once("stabilizationIterationsDone", () => { // Sadece bir kez çalışsın
-                console.log("Zincir grafiği stabilize oldu. Fizik kapatılıyor ve fit yapılıyor.");
-                 try { // setOptions hata verebilir, try-catch içine al
-                     network.setOptions({ physics: { enabled: false } });
-                 } catch (e) { console.warn("Fizik kapatılırken hata:", e); }
-                 // Başlangıç düğümüne odaklanarak fit et
-                 network.focus(startNodeId, { scale: 1.0, animation: false }); // Ölçek 1.0 ile başla
-                 // network.fit({ animation: false }); // Veya tüm zinciri sığdır
-             });
-
-             // Hata dinleyici
-             network.on("error", handleError);
-
-             // İsteğe bağlı: Zincirdeki bir düğüme tıklayınca yeni zincir başlatma
-             /*
-             network.on("selectNode", function (params) {
-                 if (params.nodes.length === 1) {
-                     const clickedNodeId = params.nodes[0];
-                     if (clickedNodeId !== startNodeId) { // Başlangıç düğümüne tekrar tıklanmadıysa
-                         console.log("Yeni başlangıç düğümü seçildi:", clickedNodeId);
-                         startNodeInput.value = clickedNodeId; // Input'u güncelle
-                         handleGenerateButtonClick(); // Yeni zinciri başlat
-                     }
-                 }
-             });
-             */
-
-        } catch (e) { console.error("Zincir grafiği oluşturulamadı:", e); handleError(e); }
+             network.setOptions(optionsToUpdate);
+             console.log("Ağ seçenekleri başarıyla güncellendi.");
+        } catch (error) {
+            console.error("Ağ seçenekleri güncellenirken hata:", error);
+             // Kullanıcıya bilgi verilebilir
+             alert("Görünüm ayarları güncellenirken bir hata oluştu.");
+             // Checkbox'ları önceki durumuna döndürmek zor olabilir, şimdilik böyle bırakalım.
+        }
     }
+
+     // *** YENİ: Checkbox durumlarına göre vis seçeneklerini oluşturan yardımcı fonksiyon ***
+     function getCurrentVisOptions() {
+        const isHierarchical = hierarchyCheckbox.checked;
+        const isPhysicsEnabled = physicsCheckbox.checked;
+
+        let layoutOptions, physicsOptions;
+
+        if (isHierarchical) {
+            layoutOptions = hierarchicalOptions.layout;
+            physicsOptions = { ...hierarchicalOptions.physics, enabled: isPhysicsEnabled }; // Enable durumunu checkbox'tan al
+        } else {
+            layoutOptions = nonHierarchicalOptions.layout;
+            physicsOptions = { ...nonHierarchicalOptions.physics, enabled: isPhysicsEnabled }; // Enable durumunu checkbox'tan al
+        }
+
+        // Diğer seçenekleri (nodes, edges, groups vb.) varsayılanlardan alıp birleştir
+        return {
+            ...defaultVisOptions, // Temel ayarları al
+            layout: layoutOptions,
+            physics: physicsOptions
+            // nodes, edges, groups, interaction gibi diğer ayarlar defaultVisOptions'tan geliyor
+        };
+     }
+
+
+    // --- Sağ Tık ve Kopyalama İşlevleri ---
+    function handleRightClick(params) { /* Değişiklik Yok */ params.event.preventDefault(); hideContextMenu(); const nId = network.getNodeAt(params.pointer.DOM); if (nId) { contextNodeId = nId; contextMenu.style.top = `${params.event.clientY}px`; contextMenu.style.left = `${params.event.clientX}px`; contextMenu.style.display = 'block'; console.log("Sağ tıklandı:", nId); } else { contextNodeId = null; } }
+    function hideContextMenu() { contextMenu.style.display = 'none'; contextNodeId = null; }
+    function handleCopyName() { /* Değişiklik Yok */ if (contextNodeId) { const lbl = allNodesData.get(contextNodeId)?.label || contextNodeId; navigator.clipboard.writeText(lbl).then(() => { console.log("Kopyalandı:", lbl); const oTxt = copyNameButton.textContent; copyNameButton.textContent = 'Kopyalandı!'; setTimeout(() => { copyNameButton.textContent = oTxt; }, 1500); }).catch(err => { console.error('Kopyalama hatası:', err); alert('Kopyalanamadı.'); }); } hideContextMenu(); }
 
     // --- Hata İşleme ---
-    function handleError(error) {
-        console.error('Hata:', error);
-        setMessage(`Hata: ${error.message || 'Bilinmeyen bir hata oluştu.'}`, "error");
-        showMessage(); // Hata mesajını göster
-        if (network) { try { network.destroy(); } catch(e) {} network = null; }
-         generateButton.disabled = false; // Hata durumunda butonu tekrar aktif et
-    }
+    function handleError(error) { /* Değişiklik Yok */ console.error('Hata:', error); setMessage(`Hata: ${error.message || 'Bilinmeyen.'}`, "error"); showMessage(); if (network) { try { network.destroy(); } catch(e) {} network = null; } generateButton.disabled = selectedStartNodes.size === 0; addNodeButton.disabled = !nodeSearchInput.value.trim() || selectedStartNodes.has(nodeSearchInput.value.trim()); }
 </script>
 
 </body>
