@@ -18,28 +18,38 @@
     <!-- Cytoscape Elkjs Entegrasyonu -->
     <script src="https://unpkg.com/cytoscape-elk@2.3.0/dist/cytoscape-elk.js"></script>
 
-
     <style type="text/css">
+        /* Temel sayfa ve container stilleri */
         html, body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #f4f6f9; }
         #main-container { display: flex; flex-direction: column; height: 100%; }
+
+        /* Kontrol paneli stilleri */
         #controls { padding: 10px 15px; background-color: #ffffff; border-bottom: 1px solid #dee2e6; display: flex; flex-wrap: wrap; align-items: center; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .control-group { display: flex; align-items: center; gap: 8px; }
         .control-group label, .control-group span { font-weight: 600; color: #495057; margin-bottom: 0; white-space: nowrap; }
         .control-group input[type="checkbox"] { margin-right: 4px; cursor: pointer; }
-        /* *** DEĞİŞİKLİK 1: Tagify giriş kutusunun minimum genişliğini artır *** */
-        #node-tag-input {
-             min-width: 450px; /* Placeholder'ın sığması için artırıldı */
-             flex-grow: 1; /* Hala gerektiğinde büyümesini sağlar */
+
+        /* Tagify giriş kutusu stilleri (ana sarmalayıcıyı hedefler) */
+        .control-group .tagify {
+             min-width: 450px; /* Minimum genişlik */
+             border: 1px solid #ced4da; /* Opsiyonel: Varsayılan Tagify border'ı */
+             border-radius: 4px;        /* Opsiyonel: Köşe yuvarlama */
         }
-        .tagify__dropdown{ z-index: 9999; }
+        .tagify__dropdown{ z-index: 9999; } /* Tagify açılır listesinin üste çıkması */
+
+        /* Buton stilleri */
         #generate-button { padding: 7px 15px; font-size: 1em; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; transition: background-color 0.2s ease; }
         #generate-button:hover { background-color: #0056b3; }
         #generate-button:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+        /* Grafik alanı ve mesaj stilleri */
         #graph-container { flex-grow: 1; background-color: #ffffff; position: relative; min-height: 300px; border-top: 1px solid #dee2e6; }
         #message-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2em; color: #555; text-align: center; background-color: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 8px; z-index: 10; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: block; }
-        #message-area.loading { color: #0056b3; font-weight: bold; }
-        #message-area.error { color: #dc3545; }
-        #message-area.hidden { display: none; }
+        #message-area.loading { color: #0056b3; font-weight: bold; } /* Yükleniyor mesajı */
+        #message-area.error { color: #dc3545; } /* Hata mesajı */
+        #message-area.hidden { display: none; } /* Mesajı gizle */
+
+        /* Sağ tık menü stilleri */
         #context-menu { position: absolute; background-color: #f9f9f9; border: 1px solid #ccc; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); padding: 5px 0; min-width: 120px; z-index: 1000; display: none; border-radius: 4px; }
         #context-menu button { display: block; width: 100%; padding: 8px 15px; border: none; background: none; text-align: left; cursor: pointer; font-size: 0.95em; }
         #context-menu button:hover { background-color: #eee; }
@@ -48,12 +58,14 @@
 <body>
 
 <div id="main-container">
-     <div id="controls">
-        <!-- Parent div'in flex-grow: 1 olması önemlidir -->
+    <!-- Kontrol elemanlarını içeren bölüm -->
+    <div id="controls">
+        <!-- Tagify giriş kutusu ve etiketi (flex-grow ile genişler) -->
         <div class="control-group" style="flex-grow: 1;">
             <label for="node-tag-input">Tablo Ekle:</label>
             <input id="node-tag-input" placeholder="Tablo adlarını yazın veya seçin...">
         </div>
+        <!-- Düzen ve fizik seçenekleri -->
         <div class="control-group">
             <input type="checkbox" id="toggle-hierarchy" checked>
             <label for="toggle-hierarchy">Hiyerarşik Düzen</label>
@@ -61,13 +73,17 @@
             <label for="toggle-physics">Fiziği Etkinleştir</label>
             <span style="font-size:0.8em; color: #6c757d;">(Hiyerarşik olmayan için)</span>
         </div>
+         <!-- Grafik oluşturma butonu -->
          <div class="control-group">
              <button id="generate-button" disabled>Grafiği Oluştur</button>
          </div>
     </div>
+    <!-- Cytoscape grafiğinin gösterileceği alan -->
     <div id="graph-container">
+        <!-- Kullanıcı bilgilendirme mesaj alanı -->
         <div id="message-area">Başlamak için tablo(lar) ekleyin ve 'Grafiği Oluştur'a tıklayın.</div>
     </div>
+    <!-- Sağ tık bağlam menüsü -->
     <div id="context-menu">
         <button id="copy-node-name-button">İsmi Kopyala</button>
     </div>
@@ -82,13 +98,34 @@
     }
 
     // --- Yapılandırma ---
-    const csvPath = 'lib/table_relations.csv';
-    const nodeFixedSize = { widthPadding: 20, height: 35 };
+    const csvPath = 'lib/table_relations.csv'; // CSV dosyasının yolu
+    const nodeFixedSize = { widthPadding: 20, height: 35 }; // Düğüm boyutlandırma ayarları (etiket için padding ve sabit yükseklik)
 
-    // --- Cytoscape.js Varsayılan Stil ve Düzen Seçenekleri ---
+    // --- Cytoscape.js Varsayılan Stil Tanımları ---
     const defaultCyStyle = [
-        { selector: 'node', style: { 'background-color': '#e9ecef', 'border-color': '#adb5bd', 'border-width': 1.5, 'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center', 'font-size': '10px', 'color': '#212529', 'text-wrap': 'none', 'width': 'label', 'padding-left': nodeFixedSize.widthPadding / 2, 'padding-right': nodeFixedSize.widthPadding / 2, 'height': nodeFixedSize.height, 'shape': 'rectangle', } },
-        { selector: 'node:selected', style: { 'border-color': '#e60000', 'border-width': 3, 'background-color': '#ffcccc', 'overlay-color': '#e60000', 'overlay-opacity': 0.25, 'overlay-padding': 8, 'z-index': 10 } },
+        { // Varsayılan düğüm stili
+            selector: 'node',
+            style: {
+                'background-color': '#e9ecef', 'border-color': '#adb5bd', 'border-width': 1.5,
+                'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center',
+                'font-size': '10px', 'color': '#212529',
+                'text-wrap': 'none',        // Etiketi tek satırda tut
+                'width': 'label',           // Genişliği etikete göre ayarla
+                'padding-left': nodeFixedSize.widthPadding / 2, // Etiket için sol boşluk
+                'padding-right': nodeFixedSize.widthPadding / 2, // Etiket için sağ boşluk
+                'height': nodeFixedSize.height, // Sabit yükseklik
+                'shape': 'rectangle',       // Düğüm şekli: dikdörtgen
+            }
+        },
+        { // Seçili düğüm stili
+            selector: 'node:selected',
+            style: {
+                'border-color': '#e60000', 'border-width': 3, 'background-color': '#ffcccc',
+                'overlay-color': '#e60000', 'overlay-opacity': 0.25, 'overlay-padding': 8, // Seçimi belirginleştiren overlay
+                'z-index': 10 // Seçili düğümü üste çıkar
+            }
+        },
+        // Grup bazlı düğüm renkleri (arka plan ve kenarlık)
         { selector: 'node[group="Staging"]', style: { 'background-color': '#fff3cd', 'border-color': '#ffe69c' } },
         { selector: 'node[group="Dimension"]', style: { 'background-color': '#d1e7dd', 'border-color': '#a3cfbb' } },
         { selector: 'node[group="Fact"]', style: { 'background-color': '#cfe2ff', 'border-color': '#a6c9ff', 'font-weight':'bold' } },
@@ -97,288 +134,535 @@
         { selector: 'node[group="Mart"]', style: { 'background-color': '#d4edda', 'border-color': '#b3dfca' } },
         { selector: 'node[group="Source"]', style: { 'background-color': '#dee2e6', 'border-color': '#adb5bd'} },
         { selector: 'node[group="Other"]', style: { 'background-color': '#e9ecef', 'border-color': '#adb5bd' } },
-        { selector: 'node[isStartNode="true"]', style: { 'border-width': 3.5, 'border-color': '#0056b3', 'font-weight': 'bold', 'shadow-color': '#007bff', 'shadow-opacity': 0.4, 'shadow-blur': 8, 'shadow-offset-x': 3, 'shadow-offset-y': 3 } },
-        { selector: 'edge', style: { 'width': 1.5, 'line-color': '#ced4da', 'target-arrow-shape': 'triangle', 'target-arrow-color': '#ced4da', 'arrow-scale': 1, 'curve-style': 'bezier', 'z-index': 1 } },
-        { selector: 'edge.highlighted-by-node', style: { 'line-color': '#e60000', 'target-arrow-color': '#e60000', 'width': 2.5, 'z-index': 5 } },
-        { selector: 'edge:selected', style: { 'line-color': '#e60000', 'target-arrow-color': '#e60000', 'width': 3, 'overlay-color': '#e60000', 'overlay-opacity': 0.2, 'overlay-padding': 6, 'z-index': 9 } }
+        { // Zincir başlangıcı olarak seçilen düğümlerin özel stili
+            selector: 'node[isStartNode="true"]',
+            style: {
+                'border-width': 3.5, 'border-color': '#0056b3', 'font-weight': 'bold',
+                'shadow-color': '#007bff', 'shadow-opacity': 0.4, 'shadow-blur': 8, // Gölge efektleri
+                'shadow-offset-x': 3, 'shadow-offset-y': 3
+            }
+        },
+        { // Varsayılan kenar (ok) stili
+            selector: 'edge',
+            style: {
+                'width': 1.5, 'line-color': '#ced4da', 'target-arrow-shape': 'triangle',
+                'target-arrow-color': '#ced4da', 'arrow-scale': 1, 'curve-style': 'bezier',
+                'z-index': 1 // Kenarları düğümlerin arkasında tut
+            }
+        },
+        { // Bir düğüm seçildiğinde o düğüme bağlı kenarların stili
+            selector: 'edge.highlighted-by-node',
+            style: {
+                'line-color': '#e60000', 'target-arrow-color': '#e60000', // Kırmızı renk
+                'width': 2.5, // Biraz daha kalın
+                'z-index': 5 // Normal kenarların üstünde
+            }
+        },
+        { // Seçili kenar stili
+            selector: 'edge:selected',
+            style: {
+                'line-color': '#e60000', 'target-arrow-color': '#e60000', 'width': 3,
+                'overlay-color': '#e60000', 'overlay-opacity': 0.2, 'overlay-padding': 6, // Seçimi belirginleştiren overlay
+                'z-index': 9 // Seçili kenarı üste çıkar
+            }
+        }
     ];
 
+    // --- ElkJS Layout Temel Seçenekleri ---
     const elkLayoutOptionsBase = {
-        name: 'elk', fit: true, padding: 60, animate: false,
-        elk: {
-            'elk.padding': '[top=60,left=60,bottom=60,right=60]', 'elk.spacing.nodeNode': 80,
-            'elk.nodeLabels.placement': 'INSIDE', 'elk.nodeSize.constraints': 'NODE_LABELS MINIMUM_SIZE',
-            'elk.nodeSize.options': `[minimumPadding=${nodeFixedSize.widthPadding/2}]`,
-            'elk.nodeSize.minimum': `[width=${nodeFixedSize.widthPadding}, height=${nodeFixedSize.height}]`
+        name: 'elk',    // Kullanılacak layout motoru
+        fit: true,      // Grafiği ekrana sığdır
+        padding: 60,    // Kenarlardan boşluk
+        animate: false, // Layout animasyonunu kapat
+        elk: { // ElkJS'e özel seçenekler
+            'elk.padding': '[top=60,left=60,bottom=60,right=60]', // Elkjs için iç boşluk
+            'elk.spacing.nodeNode': 80, // Düğümler arası minimum boşluk
+            // ElkJS'in düğüm etiketlerini ve boyutlarını dikkate alması için ayarlar
+            'elk.nodeLabels.placement': 'INSIDE',
+            'elk.nodeSize.constraints': 'NODE_LABELS MINIMUM_SIZE',
+            'elk.nodeSize.options': `[minimumPadding=${nodeFixedSize.widthPadding/2}]`, // Düğüm iç boşluğu
+            'elk.nodeSize.minimum': `[width=${nodeFixedSize.widthPadding}, height=${nodeFixedSize.height}]` // Min. düğüm boyutu
         }
     };
 
     // --- Global Değişkenler ---
-    let cy = null;
-    let allNodesMasterData = new Map();
-    let allEdgesMasterData = [];
-    let outgoingEdgesMap = new Map(); let incomingEdgesMap = new Map();
-    let selectedStartNodes = new Set();
-    let tagifyInstance = null;
+    let cy = null; // Cytoscape instance
+    let allNodesMasterData = new Map(); // Tüm düğüm bilgilerini (ID, label, group) saklar
+    let allEdgesMasterData = []; // Tüm kenar bilgilerini (from, to, id) saklar
+    let outgoingEdgesMap = new Map(); // Bir düğümden çıkan kenarları hızlı erişim için saklar
+    let incomingEdgesMap = new Map(); // Bir düğüme giren kenarları hızlı erişim için saklar
+    let selectedStartNodes = new Set(); // Tagify ile seçilen başlangıç düğümlerinin ID'leri
+    let tagifyInstance = null; // Tagify kütüphanesi örneği
+    let contextNodeId = null; // Sağ tıklanan düğümün ID'si
 
     // --- DOM Element Referansları ---
     const graphContainer = document.getElementById('graph-container');
     const messageArea = document.getElementById('message-area');
-    const nodeTagInput = document.getElementById('node-tag-input');
+    const nodeTagInput = document.getElementById('node-tag-input'); // Tagify için orijinal input
     const generateButton = document.getElementById('generate-button');
     const contextMenu = document.getElementById('context-menu');
     const copyNameButton = document.getElementById('copy-node-name-button');
     const hierarchyCheckbox = document.getElementById('toggle-hierarchy');
     const physicsCheckbox = document.getElementById('toggle-physics');
-    let contextNodeId = null;
 
     // --- Başlatma ---
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => { // Sayfa yüklendiğinde çalışır
         setMessage("Veri yükleniyor...", "loading");
-        generateButton.disabled = true;
-        hierarchyCheckbox.checked = true;
-        physicsCheckbox.checked = false;
+        generateButton.disabled = true; // Başlangıçta buton pasif
+        hierarchyCheckbox.checked = true; // Varsayılan layout hiyerarşik
+        physicsCheckbox.checked = false; // Varsayılan olarak fizik kapalı
 
+        // Tagify kütüphanesini başlat
         tagifyInstance = new Tagify(nodeTagInput, {
-            dropdown: { maxItems: 15, enabled: 0, closeOnSelect: true, highlightFirst: true },
-            enforceWhitelist: true,
-            delimiters: ",|\t",
+            dropdown: { maxItems: 15, enabled: 0, closeOnSelect: true, highlightFirst: true }, // Açılır liste ayarları
+            enforceWhitelist: true, // Sadece beyaz listedeki (tablo adları) etiketlere izin ver
+            delimiters: ",|\t", // Etiket ayırıcıları (virgül veya tab)
         });
-        tagifyInstance.on('add', onTagAdd);
-        tagifyInstance.on('remove', onTagRemove);
+        // Tagify olay dinleyicileri
+        tagifyInstance.on('add', onTagAdd); // Etiket eklendiğinde
+        tagifyInstance.on('remove', onTagRemove); // Etiket çıkarıldığında
 
-        loadAndProcessData();
+        loadAndProcessData(); // CSV verisini yükle ve işle
 
+        // Buton ve checkbox olay dinleyicileri
         generateButton.addEventListener('click', handleGenerateButtonClick);
-        copyNameButton.addEventListener('click', handleCopyName); // handleCopyName güncellendi
-        document.addEventListener('click', hideContextMenu);
-        graphContainer.addEventListener('click', hideContextMenu);
-        hierarchyCheckbox.addEventListener('change', updateNetworkOptions);
-        physicsCheckbox.addEventListener('change', updateNetworkOptions);
+        copyNameButton.addEventListener('click', handleCopyName);
+        document.addEventListener('click', hideContextMenu); // Sayfanın herhangi bir yerine tıklayınca menüyü gizle
+        graphContainer.addEventListener('click', hideContextMenu); // Grafik alanına tıklayınca menüyü gizle
+        hierarchyCheckbox.addEventListener('change', updateNetworkOptions); // Checkbox değişince layout'u güncelle
+        physicsCheckbox.addEventListener('change', updateNetworkOptions); // Checkbox değişince layout'u güncelle
     });
 
     // --- Tagify Olay İşleyicileri ---
-    function onTagAdd(e) { selectedStartNodes.add(e.detail.data.value); generateButton.disabled = selectedStartNodes.size === 0; }
-    function onTagRemove(e) { selectedStartNodes.delete(e.detail.data.value); generateButton.disabled = selectedStartNodes.size === 0; }
+    function onTagAdd(e) { // Etiket eklendiğinde çalışır
+        selectedStartNodes.add(e.detail.data.value); // Seçilenler listesine ekle
+        generateButton.disabled = selectedStartNodes.size === 0; // Seçim varsa butonu aktif et
+    }
+    function onTagRemove(e) { // Etiket kaldırıldığında çalışır
+        selectedStartNodes.delete(e.detail.data.value); // Seçilenler listesinden çıkar
+        generateButton.disabled = selectedStartNodes.size === 0; // Seçim yoksa butonu pasif yap
+    }
 
-    // --- Mesaj Yönetimi ---
-    function setMessage(text, type = "info") { messageArea.textContent = text; messageArea.className = type; showMessage(); }
-    function hideMessage() { messageArea.classList.add("hidden"); }
-    function showMessage() { messageArea.classList.remove("hidden"); }
+    // --- Mesaj Yönetimi Fonksiyonları ---
+    function setMessage(text, type = "info") { // Bilgi mesajını ayarlar ve gösterir
+        messageArea.textContent = text; messageArea.className = type; showMessage();
+    }
+    function hideMessage() { // Mesaj alanını gizler
+        messageArea.classList.add("hidden");
+    }
+    function showMessage() { // Mesaj alanını gösterir
+        messageArea.classList.remove("hidden");
+    }
 
     // --- Veri Yükleme ve Ön İşleme ---
-    function loadAndProcessData() {
-         fetch(csvPath).then(r=>{if(!r.ok)throw new Error(`HTTP ${r.status}: ${csvPath} alınamadı.`);return r.text();}).then(txt=>{Papa.parse(txt,{header:true,skipEmptyLines:true,complete:(res)=>{if(res.errors.length>0)console.warn("CSV Hataları:",res.errors);if(res.data.length===0)throw new Error("CSV boş veya geçersiz.");preprocessData(res.data);setMessage("Başlamak için tablo(lar) ekleyin ve 'Grafiği Oluştur'a tıklayın.");},error:(err)=>{throw new Error("CSV Ayrıştırma Hatası: "+err.message);}});}).catch(handleError);
+    function loadAndProcessData() { // CSV'den veriyi yükler ve PapaParse ile ayrıştırır
+         fetch(csvPath)
+            .then(r => { if(!r.ok) throw new Error(`HTTP ${r.status}: ${csvPath} alınamadı.`); return r.text(); })
+            .then(txt => {
+                Papa.parse(txt, {
+                    header: true, skipEmptyLines: true,
+                    complete: (res) => {
+                        if(res.errors.length > 0) console.warn("CSV Hataları:", res.errors);
+                        if(res.data.length === 0) throw new Error("CSV boş veya geçersiz.");
+                        preprocessData(res.data); // Veriyi işle
+                        setMessage("Başlamak için tablo(lar) ekleyin ve 'Grafiği Oluştur'a tıklayın."); // Kullanıcıya bilgi ver
+                    },
+                    error: (err) => { throw new Error("CSV Ayrıştırma Hatası: "+err.message); }
+                });
+            })
+            .catch(handleError); // Hata olursa yakala
     }
-    function preprocessData(data) {
+    function preprocessData(data) { // Yüklenen ham veriyi Cytoscape için uygun formata getirir, grupları belirler
         console.log("Veri ön işleniyor...");
+        // Global veri yapılarını temizle
         allNodesMasterData.clear(); allEdgesMasterData = []; outgoingEdgesMap.clear(); incomingEdgesMap.clear();
-        const edgesSet = new Set(); const degrees = {};
-        data.forEach(row => {
-            const source = row.source_table_name?.trim(); const target = row.target_table_name?.trim();
-            if (source && target && source !== target) {
-                const edgeKey = `${source}->${target}`;
-                if (!edgesSet.has(edgeKey)) {
-                    edgesSet.add(edgeKey); allEdgesMasterData.push({ from: source, to: target, id: edgeKey });
+        const edgesSet = new Set(); // Tekrarlanan kenarları engellemek için
+
+        data.forEach(row => { // Her CSV satırı için
+            const source = row.source_table_name?.trim(); // Kaynak tablo adı
+            const target = row.target_table_name?.trim(); // Hedef tablo adı
+            if (source && target && source !== target) { // Geçerli bir kenar mı?
+                const edgeKey = `${source}->${target}`; // Kenar için benzersiz anahtar
+                if (!edgesSet.has(edgeKey)) { // Daha önce eklenmediyse
+                    edgesSet.add(edgeKey);
+                    allEdgesMasterData.push({ from: source, to: target, id: edgeKey }); // Kenarı listeye ekle
+
+                    // Kaynak ve hedef düğümleri işle
                     [source, target].forEach(nodeId => {
-                        if (!allNodesMasterData.has(nodeId)) {
-                            const label = nodeId.includes('.') ? nodeId.split('.').pop() : nodeId;
-                            allNodesMasterData.set(nodeId, { id: nodeId, label: label }); degrees[nodeId] = 0;
+                        if (!allNodesMasterData.has(nodeId)) { // Düğüm daha önce eklenmediyse
+                            const label = nodeId.includes('.') ? nodeId.split('.').pop() : nodeId; // 'schema.table' ise sadece 'table' al (kısa etiket)
+                            allNodesMasterData.set(nodeId, { id: nodeId, label: label }); // Düğümü map'e ekle
                         }
                     });
-                    degrees[source]++; degrees[target]++;
-                    if (!outgoingEdgesMap.has(source)) outgoingEdgesMap.set(source, new Set()); outgoingEdgesMap.get(source).add({ from: source, to: target, id: edgeKey });
-                    if (!incomingEdgesMap.has(target)) incomingEdgesMap.set(target, new Set()); incomingEdgesMap.get(target).add({ from: source, to: target, id: edgeKey });
+
+                    // Hızlı erişim haritalarını güncelle
+                    if (!outgoingEdgesMap.has(source)) outgoingEdgesMap.set(source, new Set());
+                    outgoingEdgesMap.get(source).add({ from: source, to: target, id: edgeKey });
+                    if (!incomingEdgesMap.has(target)) incomingEdgesMap.set(target, new Set());
+                    incomingEdgesMap.get(target).add({ from: source, to: target, id: edgeKey });
                 }
             }
         });
+
+        // Düğüm gruplarını belirle (isimlendirme kuralına göre)
         const nodeIds = Array.from(allNodesMasterData.keys());
         nodeIds.forEach(nodeId => {
             const nodeData = allNodesMasterData.get(nodeId);
-            const parts = nodeId.replace(/^.*?\.?/, '').split('_'); const prefix = parts[0]?.toLowerCase(); let group = 'Other';
-            if (prefix==='stg') group='Staging'; else if (prefix==='dim') group='Dimension'; else if (prefix==='fct'||prefix==='fact') group='Fact'; else if (prefix==='agg') group='Aggregate'; else if (prefix==='rpt') group='Reporting'; else if (prefix==='mrt') group='Mart'; else if (prefix==='src') group='Source';
-            nodeData.group = group;
+            // İsimlendirme kuralına göre prefix'i al (şema adını atlayarak)
+            const parts = nodeId.replace(/^.*?\.?/, '').split('_');
+            const prefix = parts[0]?.toLowerCase();
+            let group = 'Other'; // Varsayılan grup
+            // Prefix'e göre grubu ata
+            if (prefix==='stg') group='Staging';
+            else if (prefix==='dim') group='Dimension';
+            else if (prefix==='fct'||prefix==='fact') group='Fact';
+            else if (prefix==='agg') group='Aggregate';
+            else if (prefix==='rpt') group='Reporting';
+            else if (prefix==='mrt') group='Mart';
+            else if (prefix==='src') group='Source';
+            nodeData.group = group; // Düğüm verisine grubu ekle
         });
+
         console.log(`Ön işleme: ${allNodesMasterData.size} düğüm, ${allEdgesMasterData.length} kenar.`);
-        if (tagifyInstance) { const sortedNodeIds = nodeIds.sort(); tagifyInstance.settings.whitelist = sortedNodeIds; console.log("Tagify whitelist güncellendi."); }
+        // Tagify için beyaz listeyi (öneri listesi) güncelle
+        if (tagifyInstance) {
+            const sortedNodeIds = nodeIds.sort(); // Alfabetik sırala
+            tagifyInstance.settings.whitelist = sortedNodeIds;
+            console.log("Tagify whitelist güncellendi.");
+        }
     }
 
     // --- Zincir Bulma ---
-    function findDependencyChain(startNodeId) {
-         const chainNodes = new Set(); const chainEdges = new Set(); if (!allNodesMasterData.has(startNodeId)) return null; chainNodes.add(startNodeId); const vDown = new Set([startNodeId]); const dQ = [startNodeId]; let h = 0; while(h < dQ.length){ const c = dQ[h++]; if (outgoingEdgesMap.has(c)) { outgoingEdgesMap.get(c).forEach(e => { chainEdges.add(e); chainNodes.add(e.to); if (!vDown.has(e.to)) { vDown.add(e.to); dQ.push(e.to); } }); } } const vUp = new Set([startNodeId]); const uQ = [startNodeId]; h = 0; while(h < uQ.length){ const c = uQ[h++]; if (incomingEdgesMap.has(c)) { incomingEdgesMap.get(c).forEach(e => { chainEdges.add(e); chainNodes.add(e.from); if (!vUp.has(e.from)) { vUp.add(e.from); uQ.push(e.from); } }); } } return { nodes: Array.from(chainNodes), edges: Array.from(chainEdges) };
+    function findDependencyChain(startNodeId) { // Belirtilen başlangıç düğümünden yukarı ve aşağı bağımlılıkları bulur
+         const chainNodes = new Set(); // Zincirdeki düğümler
+         const chainEdges = new Set(); // Zincirdeki kenarlar
+         if (!allNodesMasterData.has(startNodeId)) return null; // Başlangıç düğümü yoksa null dön
+
+         chainNodes.add(startNodeId); // Başlangıç düğümünü ekle
+
+         // Aşağı doğru bağımlılıkları bul (Depth First Search benzeri)
+         const visitedDown = new Set([startNodeId]);
+         const queueDown = [startNodeId];
+         let headDown = 0;
+         while(headDown < queueDown.length){
+             const current = queueDown[headDown++];
+             if (outgoingEdgesMap.has(current)) { // Bu düğümden çıkan kenarlar varsa
+                 outgoingEdgesMap.get(current).forEach(edge => {
+                     chainEdges.add(edge); // Kenarı zincire ekle
+                     chainNodes.add(edge.to); // Hedef düğümü zincire ekle
+                     if (!visitedDown.has(edge.to)) { // Hedef daha önce ziyaret edilmediyse
+                         visitedDown.add(edge.to);
+                         queueDown.push(edge.to); // Kuyruğa ekle
+                     }
+                 });
+             }
+         }
+
+         // Yukarı doğru bağımlılıkları bul (Depth First Search benzeri)
+         const visitedUp = new Set([startNodeId]);
+         const queueUp = [startNodeId];
+         let headUp = 0;
+         while(headUp < queueUp.length){
+             const current = queueUp[headUp++];
+             if (incomingEdgesMap.has(current)) { // Bu düğüme giren kenarlar varsa
+                 incomingEdgesMap.get(current).forEach(edge => {
+                     chainEdges.add(edge); // Kenarı zincire ekle
+                     chainNodes.add(edge.from); // Kaynak düğümü zincire ekle
+                     if (!visitedUp.has(edge.from)) { // Kaynak daha önce ziyaret edilmediyse
+                         visitedUp.add(edge.from);
+                         queueUp.push(edge.from); // Kuyruğa ekle
+                     }
+                 });
+             }
+         }
+         // Bulunan düğüm ve kenarları döndür
+         return { nodes: Array.from(chainNodes), edges: Array.from(chainEdges) };
     }
 
     // --- Grafik Oluşturma ve Güncelleme ---
-    function handleGenerateButtonClick() {
-        const validStartNodeIds = Array.from(selectedStartNodes);
-        if (validStartNodeIds.length === 0) { setMessage("Lütfen en az bir tablo ekleyin.", "error"); return; }
-        setMessage("Grafik oluşturuluyor...", "loading"); generateButton.disabled = true;
+    function handleGenerateButtonClick() { // 'Grafiği Oluştur' butonu tıklama olayını yönetir
+        const validStartNodeIds = Array.from(selectedStartNodes); // Seçilen başlangıç düğümlerini al
+        if (validStartNodeIds.length === 0) { // Seçim yoksa uyarı ver
+             setMessage("Lütfen en az bir tablo ekleyin.", "error"); return;
+        }
+
+        setMessage("Grafik oluşturuluyor...", "loading"); // Yükleniyor mesajı göster
+        generateButton.disabled = true; // Butonu pasif yap
+
+        // setTimeout ile UI'ın mesajı göstermesine izin ver ve sonra zinciri bul/çiz
         setTimeout(() => {
             try {
-                const combinedNodesSet = new Set(); const combinedEdgesMap = new Map();
+                const combinedNodesSet = new Set(); // Tüm zincirlerdeki benzersiz düğümler
+                const combinedEdgesMap = new Map(); // Tüm zincirlerdeki benzersiz kenarlar
+
+                // Seçilen her başlangıç düğümü için zinciri bul
                 validStartNodeIds.forEach(startId => {
                     const chain = findDependencyChain(startId);
-                    if (chain) { chain.nodes.forEach(nId => combinedNodesSet.add(nId)); chain.edges.forEach(e => combinedEdgesMap.set(e.id, e)); }
+                    if (chain) { // Zincir bulunduysa düğüm ve kenarları ekle
+                        chain.nodes.forEach(nId => combinedNodesSet.add(nId));
+                        chain.edges.forEach(e => combinedEdgesMap.set(e.id, e)); // Map kullanarak kenarları benzersiz tut
+                    }
                 });
+
                 console.log(`Birleşik: ${combinedNodesSet.size} düğüm, ${combinedEdgesMap.size} kenar.`);
+
+                // Eğer hiç düğüm bulunamadıysa veya sadece başlangıç düğümleri (ve hiç kenar yoksa) bilgi mesajı ver
                 if (combinedNodesSet.size === 0 || (combinedNodesSet.size <= validStartNodeIds.length && combinedEdgesMap.size === 0)) {
                     setMessage(`Seçilenler (${validStartNodeIds.join(', ')}) için bağımlılık yok veya zincir bulunamadı.`, "info");
-                    if (cy) { cy.destroy(); cy = null; } showMessage(); generateButton.disabled = selectedStartNodes.size === 0; return;
+                    if (cy) { cy.destroy(); cy = null; } // Varsa eski grafiği kaldır
+                    showMessage(); // Mesajı göster
+                    generateButton.disabled = selectedStartNodes.size === 0; // Buton durumunu güncelle
+                    return; // Fonksiyondan çık
                 }
+
+                // Cytoscape için element listesini oluştur
                 const cyElements = [];
-                combinedNodesSet.forEach(nodeId => {
+                combinedNodesSet.forEach(nodeId => { // Düğümleri ekle
                     const masterNodeData = allNodesMasterData.get(nodeId);
-                    if (masterNodeData) { cyElements.push({ group: 'nodes', data: { id: masterNodeData.id, label: masterNodeData.label, group: masterNodeData.group, isStartNode: validStartNodeIds.includes(masterNodeData.id) } }); }
+                    if (masterNodeData) {
+                        cyElements.push({ group: 'nodes', data: { id: masterNodeData.id, label: masterNodeData.label, group: masterNodeData.group, isStartNode: validStartNodeIds.includes(masterNodeData.id) } });
+                    }
                 });
-                combinedEdgesMap.forEach(edge => { cyElements.push({ group: 'edges', data: { id: edge.id, source: edge.from, target: edge.to } }); });
+                combinedEdgesMap.forEach(edge => { // Kenarları ekle
+                    cyElements.push({ group: 'edges', data: { id: edge.id, source: edge.from, target: edge.to } });
+                });
+
+                // Grafiği çiz (mesajı bu fonksiyon gizlemeyecek)
                 renderChainGraph(cyElements, validStartNodeIds);
-            } catch (error) { handleError(error); }
-            finally { generateButton.disabled = selectedStartNodes.size === 0; }
-        }, 50);
+
+            } catch (error) { // Hata olursa yakala ve göster
+                handleError(error);
+            }
+            finally { // Her durumda buton durumunu güncelle
+                generateButton.disabled = selectedStartNodes.size === 0;
+            }
+        }, 50); // Kısa gecikme (UI güncellemesi için)
     }
 
-    function renderChainGraph(elements, startNodeIds) {
+    function renderChainGraph(elements, startNodeIds) { // Cytoscape grafiğini oluşturur ve ekranda gösterir
         console.log("Cytoscape grafiği oluşturuluyor...");
-        if (cy) { cy.destroy(); cy = null; }
-        const currentLayoutOptions = getCurrentCyLayoutOptions();
+        if (cy) { cy.destroy(); cy = null; } // Varsa eski grafiği kaldır
+
+        const currentLayoutOptions = getCurrentCyLayoutOptions(); // Mevcut layout seçeneklerini al
         console.log("Kullanılan layout seçenekleri:", currentLayoutOptions);
+
+        // Yeni Cytoscape örneğini oluştur
         cy = cytoscape({
-            container: graphContainer, elements: elements, style: defaultCyStyle,
-            layout: currentLayoutOptions, zoom: 1, pan: { x: 0, y: 0 },
-            minZoom: 0.05, maxZoom: 5, wheelSensitivity: 2.0, selectionType: 'single',
+            container: graphContainer, // Grafik alanı
+            elements: elements,       // Düğüm ve kenarlar
+            style: defaultCyStyle,    // Stil tanımları
+            layout: currentLayoutOptions, // Layout seçenekleri (başlangıçta çalıştırılır)
+            zoom: 1,                  // Başlangıç zoom seviyesi
+            pan: { x: 0, y: 0 },      // Başlangıç pan pozisyonu
+            minZoom: 0.05,            // Minimum zoom
+            maxZoom: 5,               // Maksimum zoom
+            wheelSensitivity: 2.0,    // Fare tekerleği hassasiyeti (daha hızlı zoom için > 1)
+            selectionType: 'single',  // Sadece tek eleman seçimi
         });
+
+        // Cytoscape hazır olduğunda çalışacaklar
         cy.ready(() => {
             console.log("Cytoscape grafiği hazır.");
+
+            // İlk layout işlemi bittiğinde çalışacak olay (asenkron layout için önemli)
             cy.one('layoutstop', () => {
                 console.log('Initial layout finished.');
+                // Layout bittikten sonra grafiği ekrana sığdır ve başlangıç düğümüne odaklan
                  if (startNodeIds && startNodeIds.length > 0) {
-                    const startNodesCy = cy.nodes(`[id = "${startNodeIds[0]}"]`);
-                    if (startNodesCy.length > 0) { cy.fit(cy.elements(), 80); cy.center(startNodesCy); }
-                    else { cy.fit(cy.elements(), 80); }
-                } else { cy.fit(cy.elements(), 80); }
-                hideMessage();
+                    const startNodesCy = cy.nodes(`[id = "${startNodeIds[0]}"]`); // İlk başlangıç düğümünü bul
+                    if (startNodesCy.length > 0) {
+                        cy.fit(cy.elements(), 80); // Tüm elemanları sığdır (80px padding)
+                        cy.center(startNodesCy);   // Başlangıç düğümünü ortaya al
+                    }
+                    else { cy.fit(cy.elements(), 80); } // Düğüm bulunamazsa sadece sığdır
+                } else { cy.fit(cy.elements(), 80); } // Başlangıç düğümü yoksa sadece sığdır
+
+                hideMessage(); // Yükleniyor mesajını gizle
             });
-            cy.on('cxttap', 'node', handleRightClickCy);
-            cy.on('tap', function(event){ if( event.target === cy ){ hideContextMenu(); } });
-            cy.on('select', 'node', handleNodeSelect);
-            cy.on('unselect', 'node', handleNodeUnselect);
+
+            // Diğer Cytoscape olay dinleyicileri
+            cy.on('cxttap', 'node', handleRightClickCy); // Düğüm sağ tıklama
+            cy.on('tap', function(event){ if( event.target === cy ){ hideContextMenu(); } }); // Boşluğa tıklama (menüyü gizle)
+            cy.on('select', 'node', handleNodeSelect); // Düğüm seçme
+            cy.on('unselect', 'node', handleNodeUnselect); // Düğüm seçimini kaldırma
         });
-        function handleNodeSelect(event) { event.target.connectedEdges().addClass('highlighted-by-node'); }
-        function handleNodeUnselect(event) { cy.edges('.highlighted-by-node').removeClass('highlighted-by-node'); }
+
+        // Kenar vurgulama için olay işleyici fonksiyonları
+        function handleNodeSelect(event) { // Düğüm seçildiğinde bağlı kenarları vurgula
+            event.target.connectedEdges().addClass('highlighted-by-node');
+        }
+        function handleNodeUnselect(event) { // Düğüm seçimi kalkınca tüm vurguları kaldır (single selection için yeterli)
+            cy.edges('.highlighted-by-node').removeClass('highlighted-by-node');
+        }
+
         console.log("Cytoscape örneği oluşturuldu, layout bekleniyor...");
     }
 
     // --- Ağ Seçeneklerini Güncelleme ---
-    function updateNetworkOptions() {
-        if (!cy || cy.elements().empty()) { return; }
+    function updateNetworkOptions() { // Checkbox değişikliklerinde layout'u günceller
+        if (!cy || cy.elements().empty()) { return; } // Grafik yoksa veya boşsa çık
+
         console.log("Layout seçenekleri güncelleniyor...");
-        const newLayoutOptions = getCurrentCyLayoutOptions();
-        setMessage("Düzen güncelleniyor...", "loading");
-        const layout = cy.layout(newLayoutOptions);
+        const newLayoutOptions = getCurrentCyLayoutOptions(); // Yeni layout seçeneklerini al (animate: false içerir)
+
+        setMessage("Düzen güncelleniyor...", "loading"); // Yükleniyor mesajı göster
+
+        const layout = cy.layout(newLayoutOptions); // Yeni layout'u hazırla
+
+        // Yeni layout bittiğinde çalışacak olay
         layout.pon('layoutstop').then(function(event){
             console.log("Layout güncellendi.");
+            // Grafiği tekrar sığdır ve odakla
             const startNodeIds = Array.from(selectedStartNodes);
              if (startNodeIds && startNodeIds.length > 0) {
                 const startNodesCy = cy.nodes(`[id = "${startNodeIds[0]}"]`);
                 if (startNodesCy.length > 0) { cy.fit(cy.elements(), 80); cy.center(startNodesCy); }
                  else { cy.fit(cy.elements(), 80); }
             } else { cy.fit(cy.elements(), 80); }
-            hideMessage();
+
+            hideMessage(); // Yükleniyor mesajını gizle
         });
-        layout.run();
+
+        layout.run(); // Yeni layout'u çalıştır
     }
 
-    function getCurrentCyLayoutOptions() {
-         const isHierarchical = hierarchyCheckbox.checked; const isPhysicsEnabled = physicsCheckbox.checked;
-         let elkSpecificOptions = {};
-        const elkNodeSizeOptions = { 'elk.nodeLabels.placement': 'INSIDE', 'elk.nodeSize.constraints': 'NODE_LABELS MINIMUM_SIZE', 'elk.nodeSize.options': `[minimumPadding=${nodeFixedSize.widthPadding/2}]`, 'elk.nodeSize.minimum': `[width=${nodeFixedSize.widthPadding}, height=${nodeFixedSize.height}]` };
+    function getCurrentCyLayoutOptions() { // Mevcut checkbox durumuna göre ElkJS layout seçeneklerini döndürür
+         const isHierarchical = hierarchyCheckbox.checked; // Hiyerarşi checkbox durumu
+         const isPhysicsEnabled = physicsCheckbox.checked; // Fizik checkbox durumu
+         let elkSpecificOptions = {}; // Algoritmaya özel ElkJS seçenekleri
+
+         // Tüm layoutlar için ortak ElkJS düğüm boyutu ayarları
+        const elkNodeSizeOptions = {
+            'elk.nodeLabels.placement': 'INSIDE', 'elk.nodeSize.constraints': 'NODE_LABELS MINIMUM_SIZE',
+            'elk.nodeSize.options': `[minimumPadding=${nodeFixedSize.widthPadding/2}]`,
+            'elk.nodeSize.minimum': `[width=${nodeFixedSize.widthPadding}, height=${nodeFixedSize.height}]`
+        };
+
+        // Hiyerarşik layout seçiliyse
         if (isHierarchical) {
-            elkSpecificOptions = { algorithm: 'layered', 'elk.direction': 'RIGHT', 'layered.spacing.nodeNodeBetweenLayers': 150, 'layered.spacing.edgeNodeBetweenLayers': 100, 'layered.spacing.nodeNode': 40, 'elk.layered.cycleBreaking.strategy': 'GREEDY', 'elk.edgeRouting': 'POLYLINE', 'elk.layered.mergeEdges': true, 'elk.separateConnectedComponents': false, ...elkNodeSizeOptions };
-        } else {
-            if (isPhysicsEnabled) { elkSpecificOptions = { algorithm: 'force', 'elk.force.iterations': 250, 'elk.force.quality': 'PROOF', ...elkNodeSizeOptions }; }
-            else { elkSpecificOptions = { algorithm: 'stress', ...elkNodeSizeOptions }; }
+            elkSpecificOptions = {
+                algorithm: 'layered', // Katmanlı algoritma
+                'elk.direction': 'RIGHT', // Yön: Soldan Sağa
+                'layered.spacing.nodeNodeBetweenLayers': 150, // Katmanlar arası yatay boşluk
+                'layered.spacing.edgeNodeBetweenLayers': 100, // Kenar-Düğüm arası yatay boşluk
+                'layered.spacing.nodeNode': 40, // Aynı katmandaki düğümler arası dikey boşluk
+                'elk.layered.cycleBreaking.strategy': 'GREEDY', // Döngü kırma stratejisi
+                'elk.edgeRouting': 'POLYLINE', // Kenar rotalama stili (ORTHOGONAL, SPLINES da olabilir)
+                'elk.layered.mergeEdges': true, // Paralel kenarları birleştir
+                'elk.separateConnectedComponents': false, // Bağlantısız bileşenleri ayırma
+                ...elkNodeSizeOptions // Ortak boyut ayarlarını ekle
+            };
+        } else { // Hiyerarşik değilse
+            if (isPhysicsEnabled) { // Fizik etkinse
+                elkSpecificOptions = {
+                    algorithm: 'force', // Kuvvet tabanlı algoritma
+                    'elk.force.iterations': 250, // İterasyon sayısı
+                    'elk.force.quality': 'PROOF', // Kalite (daha yavaş ama daha iyi sonuç)
+                    ...elkNodeSizeOptions // Ortak boyut ayarlarını ekle
+                 };
+            } else { // Fizik kapalıysa (hiyeraşik olmayan)
+                elkSpecificOptions = {
+                    algorithm: 'stress', // Stres minimizasyonu algoritması (mrtree, disco da olabilir)
+                    ...elkNodeSizeOptions // Ortak boyut ayarlarını ekle
+                 };
+            }
         }
+        // Temel seçeneklerle algoritma özelindeki seçenekleri birleştir
         return { ...elkLayoutOptionsBase, elk: { ...elkLayoutOptionsBase.elk, ...elkSpecificOptions } };
     }
 
     // --- Sağ Tık ve Kopyalama İşlevleri ---
-    function handleRightClickCy(event) {
-        event.preventDefault(); hideContextMenu(); const targetNode = event.target; contextNodeId = targetNode.id();
-        contextMenu.style.top = `${event.renderedPosition.y}px`; contextMenu.style.left = `${event.renderedPosition.x}px`; contextMenu.style.display = 'block';
-    }
-    function hideContextMenu() {
-        if (contextMenu.style.display === 'block') { contextMenu.style.display = 'none'; contextNodeId = null; }
+    function handleRightClickCy(event) { // Düğüm üzerinde sağ tıklama olayını yönetir (context menü)
+        event.preventDefault(); // Tarayıcının varsayılan menüsünü engelle
+        hideContextMenu(); // Varsa açık menüyü kapat
+        const targetNode = event.target; // Tıklanan düğüm
+        contextNodeId = targetNode.id(); // Düğüm ID'sini sakla
+
+        // Menüyü tıklanan yere yakın göster
+        contextMenu.style.top = `${event.renderedPosition.y}px`;
+        contextMenu.style.left = `${event.renderedPosition.x}px`;
+        contextMenu.style.display = 'block'; // Menüyü görünür yap
     }
 
-    // *** YENİ: Kopyalama için fallback fonksiyonu ***
-    function copyTextFallback(text) {
-        const textArea = document.createElement("textarea");
+    function hideContextMenu() { // Context menüyü gizler
+        if (contextMenu.style.display === 'block') { // Sadece açıksa gizle
+            contextMenu.style.display = 'none';
+            contextNodeId = null; // Saklanan ID'yi temizle
+        }
+    }
+
+    function copyTextFallback(text) { // Güvenli olmayan contextler için kopyalama yedek mekanizması (document.execCommand)
+        const textArea = document.createElement("textarea"); // Geçici bir textarea oluştur
+        // Görünmez yap ve ekle
         textArea.style.position = 'fixed'; textArea.style.top = '-9999px'; textArea.style.left = '-9999px';
-        textArea.value = text; document.body.appendChild(textArea); textArea.focus(); textArea.select();
+        textArea.value = text; document.body.appendChild(textArea);
+        textArea.focus(); textArea.select(); // İçeriği seç
         let successful = false;
         try {
-            successful = document.execCommand('copy');
+            successful = document.execCommand('copy'); // Kopyalamayı dene
             const msg = successful ? 'başarılı' : 'başarısız';
             console.log('Fallback kopyalama komutu ' + msg + ' oldu.');
         } catch (err) {
-            console.error('Fallback kopyalama hatası:', err);
-            successful = false;
-        } finally { // finally bloğu, hata olsa bile çalışır
+            console.error('Fallback kopyalama hatası:', err); successful = false;
+        } finally { // Her durumda textarea'yı kaldır
             document.body.removeChild(textArea);
         }
-        return successful;
+        return successful; // Başarı durumunu döndür
     }
 
-    // *** DEĞİŞİKLİK 2: Kopyalama fonksiyonu güncellendi (Fallback ile) ***
-    function handleCopyName() {
-        if (contextNodeId && cy) {
-            const node = cy.getElementById(contextNodeId);
-            const textToCopy = node.id(); // Tam ID'yi kopyala
+    function handleCopyName() { // Context menüden düğüm ID'sini panoya kopyalar (fallback ile)
+        if (contextNodeId && cy) { // Geçerli bir düğüm ID'si ve Cytoscape örneği varsa
+            const node = cy.getElementById(contextNodeId); // İlgili düğümü bul
+            const textToCopy = node.id(); // Kopyalanacak metin (düğüm ID'si)
 
             // Başarı mesajını göstermek için yardımcı fonksiyon
             const showSuccessMessage = () => {
-                 const oTxt = copyNameButton.textContent;
-                 copyNameButton.textContent = 'Kopyalandı!';
-                 setTimeout(() => { copyNameButton.textContent = oTxt; }, 1500);
+                 const oTxt = copyNameButton.textContent; // Orijinal buton metni
+                 copyNameButton.textContent = 'Kopyalandı!'; // Geçici mesaj
+                 setTimeout(() => { copyNameButton.textContent = oTxt; }, 1500); // 1.5 sn sonra eski haline getir
             };
 
-            // Güvenli context ve Clipboard API kontrolü
+            // Modern Clipboard API'yi dene (HTTPS veya localhost üzerinde çalışır)
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(textToCopy).then(() => {
                     console.log("Kopyalandı (Clipboard API):", textToCopy);
-                    showSuccessMessage();
-                }).catch(err => {
+                    showSuccessMessage(); // Başarı mesajı
+                }).catch(err => { // API hatası olursa
                     console.error('Clipboard API kopyalama hatası:', err);
-                    // API başarısız olursa fallback'i dene
                     console.warn("Clipboard API hatası. Fallback deneniyor...");
+                    // Fallback yöntemini dene
                     if (copyTextFallback(textToCopy)) {
                         console.log("Kopyalandı (Fallback - API hatası sonrası):", textToCopy);
-                        showSuccessMessage();
-                    } else {
+                        showSuccessMessage(); // Başarı mesajı
+                    } else { // Fallback de başarısız olursa
                         console.error('Fallback kopyalama da başarısız.');
-                        alert('Panoya kopyalanamadı.');
+                        alert('Panoya kopyalanamadı.'); // Kullanıcıya bilgi ver
                     }
                 });
-            } else {
-                // Güvenli context yoksa veya API desteklenmiyorsa doğrudan fallback'i dene
+            } else { // Clipboard API yoksa veya context güvenli değilse
                 console.warn("Clipboard API kullanılamıyor veya context güvenli değil. Fallback deneniyor.");
+                // Doğrudan fallback yöntemini dene
                 if (copyTextFallback(textToCopy)) {
                     console.log("Kopyalandı (Fallback):", textToCopy);
-                    showSuccessMessage();
-                } else {
+                    showSuccessMessage(); // Başarı mesajı
+                } else { // Fallback başarısız olursa
                     console.error('Fallback kopyalama başarısız.');
-                    alert('Panoya kopyalanamadı.');
+                    alert('Panoya kopyalanamadı.'); // Kullanıcıya bilgi ver
                 }
             }
         }
-        hideContextMenu();
+        hideContextMenu(); // Her durumda menüyü gizle
     }
 
     // --- Hata İşleme ---
-    function handleError(error) {
-        console.error('Hata:', error); setMessage(`Hata: ${error.message || 'Bilinmeyen bir hata oluştu.'}`, "error"); showMessage();
-        if (cy) { try { cy.destroy(); } catch(e) {} cy = null; }
-        generateButton.disabled = selectedStartNodes.size === 0;
+    function handleError(error) { // Genel hata yakalama ve gösterme fonksiyonu
+        console.error('Hata:', error); // Hatayı konsola yaz
+        setMessage(`Hata: ${error.message || 'Bilinmeyen bir hata oluştu.'}`, "error"); // Kullanıcıya hata mesajı göster
+        showMessage(); // Mesajın görünür olduğundan emin ol
+        if (cy) { // Varsa Cytoscape örneğini kaldır
+             try { cy.destroy(); } catch(e) {} cy = null;
+        }
+        generateButton.disabled = selectedStartNodes.size === 0; // Buton durumunu güncelle
     }
 </script>
 
