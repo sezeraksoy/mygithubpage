@@ -968,7 +968,6 @@
                 [sourceName, targetName].forEach(nodeId => {
                     if (!allNodesMasterData.has(nodeId)) {
                         allNodesMasterData.set(nodeId, { id: nodeId, label: nodeId });
-                        // if (DEBUG_MODE && nodeId.includes("Details")) console.log(`MasterData'ya Eklendi (Node): ${nodeId}`);
                     }
                 });
 
@@ -985,20 +984,11 @@
         });
         
         if (DEBUG_MODE) console.log(`preprocessData tamamlandı: ${allNodesMasterData.size} benzersiz tablo, ${allEdgesMasterData.length} benzersiz ilişki.`);
-        // if (DEBUG_MODE && allNodesMasterData.has("RSK_Details")) console.log("RSK_Details, allNodesMasterData içinde MEVCUT."); else if(DEBUG_MODE) console.warn("RSK_Details, allNodesMasterData içinde YOK.");
-        // if (DEBUG_MODE && outgoingEdgesMap.has("RSK.RSK_Sales_Details")) {
-        //      console.log("RSK.RSK_Sales_Details için outgoingEdgesMap:", Array.from(outgoingEdgesMap.get("RSK.RSK_Sales_Details")));
-        // }
-
-
+        
         if (tagifyInstance) {
             tagifyInstance.settings.whitelist = Array.from(uniqueTableNamesForWhitelist).sort();
-            try {
-                tagifyInstance.loadWhitelist(); 
-                 if (DEBUG_MODE) console.log("Tagify whitelist güncellendi.");
-            } catch (e) {
-                console.warn("Tagify loadWhitelist error:", e);
-            }
+            // tagifyInstance.loadWhitelist(); // Bu satır hataya neden olduğu için kaldırıldı/yorumlandı
+            if (DEBUG_MODE) console.log("Tagify whitelist (settings.whitelist) güncellendi.");
         }
     };
     
@@ -1229,17 +1219,11 @@
                     const sourceNodeId = edgeObj.from;
                     const targetNodeId = edgeObj.to;
 
-                    // Mevcut Cytoscape instance'ında ID'ye göre eleman var mı?
                     const sourceIsPresentInGraph = !cy.getElementById(CSS.escape(sourceNodeId)).empty();
                     const targetIsPresentInGraph = !cy.getElementById(CSS.escape(targetNodeId)).empty();
                     
-                    // *** DÜZELTME BURADA ***
-                    // Bir node ya grafikte olmalı, YA DA bu genişletme ile yeni eklenenler (elementsToAdd içinde node olarak) arasında olmalı,
-                    // YA DA genişletmenin yapıldığı ana node olmalı.
                     const sourceIsConsidered = (sourceNodeId === nodeIdToExpand) || sourceIsPresentInGraph || elementsToAdd.some(el => el.group === 'nodes' && el.data.id === sourceNodeId);
                     const targetIsConsidered = (targetNodeId === nodeIdToExpand) || targetIsPresentInGraph || elementsToAdd.some(el => el.group === 'nodes' && el.data.id === targetNodeId);
-                    // *** DÜZELTME SONU ***
-
 
                     if (DEBUG_MODE) {
                         console.log(`  Kenar ${edgeObj.id} işleniyor:`);
