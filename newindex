@@ -137,17 +137,17 @@
             --cy-node-font-size-dark: 11px;
             --cy-node-font-weight-light: 600; 
             --cy-node-font-weight-dark: 600;
-            --cy-node-border-radius-light: 8px;
-            --cy-node-border-radius-dark: 8px;
-            --cy-node-text-shadow-blur-light: 0;
-            --cy-node-text-shadow-blur-dark: 0;
-            --cy-node-text-shadow-color-light: rgba(0,0,0,0.2); 
-            --cy-node-text-shadow-color-dark: rgba(0,0,0,0.5); 
-            --cy-node-text-shadow-offset-x-light: 0;
-            --cy-node-text-shadow-offset-x-dark: 0;
-            --cy-node-text-shadow-offset-y-light: 0;
-            --cy-node-text-shadow-offset-y-dark: 0;
-
+            --cy-node-border-radius-light: 8px;  /* DEĞİŞİKLİK: '8px' GERİ GETİRİLDİ */
+            --cy-node-border-radius-dark: 8px; /* DEĞİŞİKLİK: '8px' GERİ GETİRİLDİ */
+            --cy-node-text-shadow-blur-light: 0; /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-blur-dark: 0;  /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-color-light: rgba(0,0,0,0.2); /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-color-dark: rgba(0,0,0,0.5);  /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-offset-x-light: 0; /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-offset-x-dark: 0; /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-offset-y-light: 0; /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            --cy-node-text-shadow-offset-y-dark: 0; /* DEĞİŞİKLİK: GERİ GETİRİLDİ */
+            
             --cy-stg-bg-light: #e9ecef; 
             --cy-stg-bg-dark: #4a5568;
             --cy-stg-gradient-light: #e9ecef #dee2e6; 
@@ -586,7 +586,7 @@
         </div>
     </div>
     
-    <div style="position: relative; flex-grow: 1; display: flex; flex-direction: column;">
+    <div id="main-content-area" style="position: relative; flex-grow: 1; display: flex; flex-direction: column;"> <!-- DEĞİŞİKLİK: Yeni parent div -->
         <div id="graph-container">
         </div>
         
@@ -597,16 +597,15 @@
             <button class="floating-btn" id="fullscreen-button" title="Tam Ekran"><i class="fas fa-expand"></i></button>
         </div>
         <div id="message-area">Başlamak için tablo(lar) seçin ve 'Grafiği Oluştur'a tıklayın.</div>
-    </div>
-    
-    <div id="context-menu">
-        <button id="copy-node-name-button"><i class="fas fa-copy"></i>İsmi Kopyala</button>
-        <hr>
-        <button id="expand-downstream-button"><i class="fas fa-arrow-down"></i>Aşağı Yönlü Genişlet (1 Sv)</button>
-        <button id="expand-upstream-button"><i class="fas fa-arrow-up"></i>Yukarı Yönlü Genişlet (1 Sv)</button>
-        <hr>
-        <button id="expand-all-downstream-button"><i class="fas fa-angle-double-down"></i>Tüm Aşağı Yönlüleri Göster</button>
-        <button id="expand-all-upstream-button"><i class="fas fa-angle-double-up"></i>Tüm Yukarı Yönlüleri Göster</button>
+        <div id="context-menu"> <!-- DEĞİŞİKLİK: Context menu buraya taşındı -->
+            <button id="copy-node-name-button"><i class="fas fa-copy"></i>İsmi Kopyala</button>
+            <hr>
+            <button id="expand-downstream-button"><i class="fas fa-arrow-down"></i>Aşağı Yönlü Genişlet (1 Sv)</button>
+            <button id="expand-upstream-button"><i class="fas fa-arrow-up"></i>Yukarı Yönlü Genişlet (1 Sv)</button>
+            <hr>
+            <button id="expand-all-downstream-button"><i class="fas fa-angle-double-down"></i>Tüm Aşağı Yönlüleri Göster</button>
+            <button id="expand-all-upstream-button"><i class="fas fa-angle-double-up"></i>Tüm Yukarı Yönlüleri Göster</button>
+        </div>
     </div>
 </div>
 
@@ -614,7 +613,7 @@
     const DEBUG_MODE = true; 
     const DEBUG_CY_STYLE = false; 
     const csvPath = 'lib/table_relations.csv';
-    const nodeFixedSize = { widthPadding: 25, height: 40 };
+    const nodeFixedSize = { widthPadding: 30, height: 40 }; 
 
     const cytoscapeStyles = {
         getResolvedValue: function(varName, defaultValue = null) {
@@ -655,7 +654,7 @@
             const getSafeNumber = (varNameKey, defaultValue) => {
                 const valStr = this.getResolvedValue(varNameKey + themeSuffix);
                 const valNum = parseFloat(valStr);
-                if (DEBUG_CY_STYLE && isNaN(valNum) && valStr !== null) console.warn(`[STYLE DEBUG] getSafeNumber - ${varNameKey + themeSuffix}: '${valStr}' sayıya çevrilemedi. Varsayılan: ${defaultValue}`);
+                if (DEBUG_CY_STYLE && isNaN(valNum) && valStr !== null && valStr !== '') console.warn(`[STYLE DEBUG] getSafeNumber - ${varNameKey + themeSuffix}: '${valStr}' sayıya çevrilemedi. Varsayılan: ${defaultValue}`);
                 return isNaN(valNum) ? defaultValue : valNum;
             };
 
@@ -678,14 +677,20 @@
                         'font-size': safeGet('--cy-node-font-size','11px'), 
                         'color': safeGet('--cy-node-text', 'white'), 
                         'font-weight': String(safeGet('--cy-node-font-weight', '600')),
-                        'text-wrap': 'none', 'width': 'label', 
-                        'padding-left': nodeFixedSize.widthPadding / 2, 'padding-right': nodeFixedSize.widthPadding / 2, 
-                        'height': nodeFixedSize.height, 'shape': 'round-rectangle', 
-                        'border-radius': safeGet('--cy-node-border-radius', '8px'),
-                        'text-shadow-blur': getSafeNumber('--cy-node-text-shadow-blur', 0),
-                        'text-shadow-color': safeGet('--cy-node-text-shadow-color', isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)'),
-                        'text-shadow-offset-x': getSafeNumber('--cy-node-text-shadow-offset-x', 0), 
-                        'text-shadow-offset-y': getSafeNumber('--cy-node-text-shadow-offset-y', 0),
+                        'text-wrap': 'none', 
+                        'width': 'label', // DEĞİŞİKLİK: Eski haline getirildi
+                        'padding-left': nodeFixedSize.widthPadding / 2, // padding'i explicit olarak ayarlamaya devam edelim
+                        'padding-right': nodeFixedSize.widthPadding / 2,
+                        'height': nodeFixedSize.height, 
+                        'shape': 'round-rectangle', 
+                        // border-radius için CSS değişkeninden string ('8px') alıp direkt atıyoruz. 
+                        // Cytoscape bunu doğru yorumlayamazsa 'corner-radius' veya shape spesifik radius kullanılmalı.
+                        // Şimdilik, Cytoscape'in kendi parse mekanizmasına bırakıyoruz (getSafeNumber kullanmadan).
+                        'border-radius': safeGet('--cy-node-border-radius', '8px'), // DEĞİŞİKLİK: '8px' string olarak ve safeGet ile
+                        'text-shadow-blur': getSafeNumber('--cy-node-text-shadow-blur', 0), // DEĞİŞİKLİK: GERİ GETİRİLDİ ve getSafeNumber
+                        'text-shadow-color': safeGet('--cy-node-text-shadow-color', isDark ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)'), // DEĞİŞİKLİK: GERİ GETİRİLDİ ve safeGet
+                        'text-shadow-offset-x': getSafeNumber('--cy-node-text-shadow-offset-x', 0),  // DEĞİŞİKLİK: GERİ GETİRİLDİ ve getSafeNumber
+                        'text-shadow-offset-y': getSafeNumber('--cy-node-text-shadow-offset-y', 0), // DEĞİŞİKLİK: GERİ GETİRİLDİ ve getSafeNumber
                         'transition-property': 'border-width, border-color, background-color, color, text-shadow-color', 'transition-duration': '0.3s'
                     }},
                     { selector: 'node[label*=".STG_"]', style: { 
@@ -753,9 +758,9 @@
         animate: true, animationDuration: 500, animationEasing: 'ease-out-quad',
         elk: {
             'elk.padding': '[top=70,left=70,bottom=70,right=70]', 'elk.spacing.nodeNode': 90,
-            'elk.nodeLabels.placement': 'INSIDE', 'elk.nodeSize.constraints': 'NODE_LABELS MINIMUM_SIZE',
-            'elk.nodeSize.options': `[minimumPadding=${nodeFixedSize.widthPadding/2}]`,
-            'elk.nodeSize.minimum': `[width=${nodeFixedSize.widthPadding}, height=${nodeFixedSize.height}]`,
+            'elk.nodeLabels.placement': 'INSIDE', 
+            'elk.nodeSize.constraints': 'NODE_LABELS MINIMUM_SIZE PORT_LABELS EXTERNAL_PORTS FIXED_POS', 
+            'elk.nodeSize.options': `[minimumPadding=${nodeFixedSize.widthPadding/2}]`, // widthPadding/2 elk için de geçerli
             algorithm: 'layered', 'elk.direction': 'RIGHT',
             'layered.spacing.nodeNodeBetweenLayers': 160, 'layered.spacing.edgeNodeBetweenLayers': 110,
             'layered.spacing.nodeNode': 45, 'elk.layered.cycleBreaking.strategy': 'GREEDY',
@@ -767,6 +772,7 @@
     let cy = null, allNodesMasterData = new Map(), allEdgesMasterData = [], outgoingEdgesMap = new Map(), incomingEdgesMap = new Map();
     let selectedStartNodes = new Set(), tagifyInstance = null, contextNodeId = null, currentTheme = 'light';
 
+    const mainContentArea = document.getElementById('main-content-area'); // DEĞİŞİKLİK
     const graphContainer = document.getElementById('graph-container');
     const messageArea = document.getElementById('message-area');
     const nodeTagInput = document.getElementById('node-tag-input');
@@ -853,22 +859,32 @@
         expandUpstreamButton.addEventListener('click', () => handleExpandNodeContext('upstream', false));
         expandAllDownstreamButton.addEventListener('click', () => handleExpandNodeContext('downstream', true));
         expandAllUpstreamButton.addEventListener('click', () => handleExpandNodeContext('upstream', true));
-        document.addEventListener('click', (event) => { if (contextMenu.style.display === 'block' && !contextMenu.contains(event.target)) hideContextMenu(); }, true);
+        document.addEventListener('click', (event) => { 
+            // DEĞİŞİKLİK: Tam ekran parent div dışına tıklanınca da context menu kapansın
+            if (contextMenu.style.display === 'block' && !contextMenu.contains(event.target) && !graphContainer.contains(event.target)) {
+                 hideContextMenu();
+            }
+        }, true);
     });
 
     function toggleFullScreen() {
-        const elemToFullscreen = graphContainer.parentElement; 
+        const elemToFullscreen = mainContentArea; // DEĞİŞİKLİK: Artık yeni parent div tam ekran oluyor
         if (!document.fullscreenElement) {
             elemToFullscreen.requestFullscreen?.().catch(err => console.error(`Tam ekran hatası: ${err.message} (${err.name})`));
             fullscreenButton.innerHTML = '<i class="fas fa-compress"></i>';
+            contextMenu.style.zIndex = '2147483647'; // En yüksek z-index'e çıkar
         } else {
             document.exitFullscreen?.();
             fullscreenButton.innerHTML = '<i class="fas fa-expand"></i>';
+            contextMenu.style.zIndex = '10000'; // Normal z-index'e geri dön
         }
     }
     document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement) {
             fullscreenButton.innerHTML = '<i class="fas fa-expand"></i>';
+            contextMenu.style.zIndex = '10000'; // Normal z-index'e geri dön
+        } else {
+            contextMenu.style.zIndex = '2147483647'; // Tam ekrandayken de yüksek z-index
         }
     });
 
@@ -987,7 +1003,6 @@
         
         if (tagifyInstance) {
             tagifyInstance.settings.whitelist = Array.from(uniqueTableNamesForWhitelist).sort();
-            // tagifyInstance.loadWhitelist(); // Bu satır hataya neden olduğu için kaldırıldı/yorumlandı
             if (DEBUG_MODE) console.log("Tagify whitelist (settings.whitelist) güncellendi.");
         }
     };
@@ -1000,7 +1015,7 @@
         const neighborKey = direction === 'downstream' ? 'to' : 'from';
 
         if (!mapToUse.has(startNodeId) && DEBUG_MODE) {
-            console.warn(`getNeighboringElements: '${startNodeId}' için ${direction} haritasında giriş bulunamadı.`);
+            console.log(`getNeighboringElements: '${startNodeId}' için ${direction} haritasında giriş bulunamadı (Bu, ${direction} yönünde ilişkisi olmayan bir düğüm için normaldir).`);
         }
 
         const queue = [startNodeId];
@@ -1156,7 +1171,11 @@
                 updateStats(cy.nodes(':visible').length, cy.edges(':visible').length);
             });
             cy.on('cxttap', 'node', handleRightClickCy);
-            cy.on('tap', event => { if( event.target === cy ) hideContextMenu(); });
+            cy.on('tap', event => { 
+                if( event.target === cy ){ // Grafiğin boş alanına tıklandıysa
+                     hideContextMenu();
+                }
+            });
             cy.on('select unselect', 'node', event => {
                 cy.edges('.highlighted-by-node').removeClass('highlighted-by-node');
                 if (event.type === 'select' && event.target.isNode()) {
@@ -1287,14 +1306,41 @@
     function handleRightClickCy(event) {
         hideContextMenu(); const targetNode = event.target;
         if (!targetNode || typeof targetNode.id !== 'function' || !targetNode.isNode()) return;
-        if (event.originalEvent) { event.originalEvent.preventDefault(); event.originalEvent.stopPropagation(); }
-        else { event.preventDefault?.(); event.stopPropagation?.(); }
+        
+        // Cytoscape event'inden kaynaklanan sağ tıklama için varsayılan tarayıcı menüsünü engelle
+        if (event.originalEvent) { 
+            event.originalEvent.preventDefault();
+            event.originalEvent.stopPropagation(); 
+        } else { // Fallback, daha az olası
+            event.preventDefault?.();
+            event.stopPropagation?.();
+        }
         
         contextNodeId = targetNode.id(); 
         if (DEBUG_MODE) console.log(`handleRightClickCy: Context menu için node seçildi: ${contextNodeId}`);
         
-        const { clientX, clientY } = event.originalEvent || { clientX: event.renderedPosition.x, clientY: event.renderedPosition.y };
-        
+        // clientX/Y yerine renderedPosition kullanmak, Cytoscape zoom/pan durumlarında daha doğru konum verir.
+        const renderedPosition = event.renderedPosition || event.position || {x:0, y:0}; 
+        let clientX = renderedPosition.x;
+        let clientY = renderedPosition.y;
+
+        // Eğer tam ekran ise, menü koordinatlarını tam ekran elementine göre ayarla
+        const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        if (fullscreenElement && fullscreenElement === mainContentArea) {
+            const graphRect = graphContainer.getBoundingClientRect(); // VEYA mainContentArea.getBoundingClientRect()
+            clientX += graphRect.left;
+            clientY += graphRect.top;
+        } else if (fullscreenElement) {
+            // Başka bir element tam ekranda ise context menüyü doğru konumlandırmak zorlaşır.
+            // Bu durumu ayrıca ele almak gerekebilir ya da bu durumda context menü göstermemek tercih edilebilir.
+            // Şimdilik basitçe global clientX/Y'ye geri dönelim (eğer originalEvent varsa)
+            if (event.originalEvent && typeof event.originalEvent.clientX !== 'undefined') {
+                clientX = event.originalEvent.clientX;
+                clientY = event.originalEvent.clientY;
+            }
+        }
+
+
         const { offsetWidth: menuWidth, offsetHeight: menuHeight } = contextMenu;
         const { innerWidth: vpWidth, innerHeight: vpHeight } = window;
 
